@@ -1,5 +1,5 @@
 use crate::{linked_list, location::Location, task};
-use std::{cell::Cell, marker::PhantomPinned, ptr::NonNull, sync::Mutex};
+use std::{cell::{Cell, UnsafeCell}, marker::PhantomPinned, ptr::NonNull, sync::Mutex};
 
 thread_local! {
     /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
@@ -11,11 +11,14 @@ pub(crate) struct Frame {
     /// A source location.
     pub(crate) location: Location,
 
+    /// A lock on this tree of frames.
+    pub(crate) tasklock: Option<Mutex<()>>,
+
     /// A pointer to the parent `Frame`, if any.
     pub(crate) parent: Option<NonNull<Frame>>,
 
     /// Sub-`Frame`s.
-    pub(crate) children: Mutex<linked_list::LinkedList<Self, <Self as linked_list::Link>::Target>>,
+    pub(crate) children: UnsafeCell<linked_list::LinkedList<Self, <Self as linked_list::Link>::Target>>,
 
     // Sibling `Frame`s.
     pub(crate) pointers: linked_list::Pointers<Self>,
@@ -29,8 +32,9 @@ impl Frame {
     pub(crate) fn uninitialized(location: Location) -> Self {
         Frame {
             location,
-            parent: Some(NonNull::dangling()),
-            children: Mutex::new(linked_list::LinkedList::new()),
+            tasklock: None,
+            parent: None,
+            children: UnsafeCell::new(linked_list::LinkedList::new()),
             pointers: linked_list::Pointers::new(),
             _p: PhantomPinned,
         }
@@ -45,18 +49,17 @@ impl Frame {
 
         if let Some(parent) = self.parent {
             // If this frame has a parent, notify the parent that it has a new child.
-            let parent = unsafe {
-                // SAFETY: When calling NonNull::as_ref, you have to ensure that all of the following is true:
-                // ✓ The pointer must be properly aligned.
-                // ✓ It must be “dereferenceable” in the sense defined in the module documentation.
-                // ✓ The pointer must point to an initialized instance of T.
-                // ✓ While this reference exists, the memory the pointer points to must not get mutated (except inside UnsafeCell).
-                parent.as_ref()
-            };
+            // SAFETY: When calling NonNull::as_ref, you have to ensure that all of the following is true:
+            // ✓ The pointer must be properly aligned.
+            // ✓ It must be “dereferenceable” in the sense defined in the module documentation.
+            // ✓ The pointer must point to an initialized instance of T.
+            // ✓ While this reference exists, the memory the pointer points to must not get mutated (except inside UnsafeCell).
+            let parent = parent.as_ref();
             // Add this frame as a child of its parent.
-            parent.children.lock().unwrap().push_front(self.into());
+            unsafe { &mut *parent.children.get() }.push_front(self.into());
         } else {
             // Otherwise, this frame as a root (i.e., task).
+            self.tasklock = Some(Mutex::new(()));
             task::register(self.into());
         }
     }
@@ -95,52 +98,3 @@ unsafe impl linked_list::Link for Frame {
     }
 }
 
-impl core::fmt::Display for Frame {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        display(f, self, true, "─ ")
-    }
-}
-
-fn display<W: core::fmt::Write>(
-    mut f: &mut W,
-    frame: &Frame,
-    is_last: bool,
-    prefix: &str,
-) -> core::fmt::Result {
-    let location = &frame.location;
-    let fn_fmt = location.fn_name;
-    let file_fmt = format!(
-        "{}:{}:{}",
-        location.file_name, location.line_no, location.col_no
-    );
-
-    let current;
-    let next;
-
-    if is_last {
-        current = format!("{prefix}└─\u{a0}{fn_fmt} at {file_fmt}");
-        next = format!("{}\u{a0}\u{a0}\u{a0}", prefix);
-    } else {
-        current = format!("{prefix}├─\u{a0}{fn_fmt} at {file_fmt}");
-        next = format!("{}│\u{a0}\u{a0}", prefix);
-    }
-
-    writeln!(&mut f, "{}", {
-        let mut current = current.chars();
-        current.next().unwrap();
-        current.next().unwrap();
-        current.next().unwrap();
-        &current.as_str()
-    })?;
-
-    let mut i = 0;
-    let children = frame.children.lock().unwrap();
-    let len = children.len();
-    children.for_each(|frame| {
-        let is_last = (i + 1) == len;
-        display(f, frame, is_last, &next).unwrap();
-        i += 1;
-    });
-
-    Ok(())
-}

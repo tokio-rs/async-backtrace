@@ -21,6 +21,7 @@ async fn bar() {
 #[backtrace]
 async fn baz() {
     tokio::join!(fiz(), buz());
+    //buz().await;
 }
 
 #[inline(never)]
@@ -38,5 +39,5 @@ async fn buz() {
 #[inline(never)]
 #[backtrace]
 async fn dump() {
-    async_backtrace::dump();
+    let _ = tokio::task::spawn_blocking(|| async_backtrace::dump()).await;
 }

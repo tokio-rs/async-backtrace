@@ -41,7 +41,7 @@ pin_project! {
                 unsafe {
                     // SAFETY: When calling `LinkedList::remove`, the caller must ensure that:
                     // ✓ The given node-to-be-removed is not a part of any other linked list.
-                    parent.children.lock().unwrap().remove(this.frame.into());
+                    (&mut *parent.children.get()).remove(this.frame.into());
                 }
             } else {
                 // This frame lacks a parent; it is the root `Traced` in its futures tree.
@@ -79,6 +79,8 @@ where
                 this.frame.initialize();
             }
         }
+
+        let _guard = this.frame.tasklock.as_ref().map(|mutex| mutex.lock());
 
         // poll the future under the new current frame
         this.frame.run(|| Future::poll(this.future, cx))
