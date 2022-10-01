@@ -56,9 +56,8 @@ pub(crate) fn gen_function<'a, B: ToTokens + 'a>(
     let fake_return_edge = quote_spanned! {return_span=>
         #[allow(unreachable_code, clippy::diverging_sub_expression, clippy::let_unit_value)]
         if false {
-            let __tracing_attr_fake_return: #return_type =
-                unreachable!("this is just for type inference, and is unreachable code");
-            return __tracing_attr_fake_return;
+            let __backtrace_attr_fake_return: #return_type = loop {};
+            return __backtrace_attr_fake_return;
         }
     };
     let block = quote! {

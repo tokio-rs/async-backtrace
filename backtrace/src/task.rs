@@ -1,47 +1,38 @@
-use crate::frame::Frame;
-use dashmap::DashSet;
 use once_cell::sync::Lazy;
 use rustc_hash::FxHasher;
 use std::{
-    hash::{BuildHasherDefault, Hash, Hasher},
+    collections::HashSet as Set,
+    hash::BuildHasherDefault,
     ptr::NonNull,
+    sync::Mutex,
 };
 
-static TASKS: Lazy<DashSet<Task, BuildHasherDefault<FxHasher>>> = Lazy::new(DashSet::default);
+use crate::frame::Frame;
 
-pub fn dump() {
-    TASKS
-        .iter()
-        .for_each(|frame| println!("{}", unsafe { frame.root_frame.as_ref() }));
-}
-
-pub(crate) fn register(root_frame: NonNull<Frame>) {
-    TASKS.insert(Task { root_frame });
-}
-
-pub(crate) fn deregister(root_frame: NonNull<Frame>) {
-    TASKS.remove(&Task { root_frame });
-}
-
-struct Task {
-    root_frame: NonNull<Frame>,
-}
-
-impl Hash for Task {
-    #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.root_frame.hash(state)
-    }
-}
-
-impl Eq for Task {}
-
-impl PartialEq for Task {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        core::ptr::eq(self.root_frame.as_ptr(), other.root_frame.as_ptr())
-    }
-}
+#[derive(Hash, Eq, PartialEq)]
+struct Task(NonNull<Frame>);
 
 unsafe impl Send for Task {}
 unsafe impl Sync for Task {}
+
+static TASKS: Lazy<Mutex<Set<Task, BuildHasherDefault<FxHasher>>>> = Lazy::new(Mutex::default);
+
+/// Print out tasks.
+pub fn dump() {
+    TASKS.lock().unwrap()
+        .iter()
+        .for_each(|frame| println!("{}", unsafe { frame.0.as_ref() }));
+}
+
+/// Register a root frame as a task.
+/// 
+/// **SAFETY:** The `root_frame` must be dereferencable.
+pub(crate) unsafe fn register(root_frame: NonNull<Frame>) {
+    TASKS.lock().unwrap().insert(Task(root_frame));
+}
+
+/// 
+/// **SAFETY:** The `root_frame` must be dereferencable.
+pub(crate) unsafe fn deregister(root_frame: NonNull<Frame>) {
+    TASKS.lock().unwrap().remove(&Task(root_frame));
+}

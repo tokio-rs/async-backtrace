@@ -4,7 +4,6 @@ pub mod location;
 pub(crate) mod task;
 pub(crate) mod traced;
 
-#[doc(hidden)]
 pub use traced::Traced;
 
 pub use async_backtrace_macros::backtrace;

@@ -1,53 +1,21 @@
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
+use std::ptr::NonNull;
 
 use crate::frame::Frame;
-use crate::task;
-
-use pin_project_lite::pin_project;
-
 use crate::location::Location;
 
-/*
-if it's the root, we need to add it to the global root set
-    - which means locking it.
-if it's not the root, we need to only lock this subtree of the global root set
-    -
-*/
+use pin_project_lite::pin_project;
 
 pin_project! {
     /// Includes the wrapped future `F` in taskdumps.
     pub struct Traced<F> {
         #[pin]
         future: F,
-        polled: bool,
+        // #[pin]
         frame: Frame,
-    }
-
-    impl<T> PinnedDrop for Traced<T> {
-        fn drop(this: Pin<&mut Self>) {
-            let this = this.project();
-            if let Some(parent) = this.frame.parent {
-                // If this frame has a parent, it is not the root `Traced` in its futures tree.
-                let parent = unsafe {
-                    // SAFETY: When calling NonNull::as_ref, you have to ensure that all of the following is true:
-                    // ✓ The pointer must be properly aligned.
-                    // ✓ It must be “dereferenceable” in the sense defined in the module documentation.
-                    // ✓ The pointer must point to an initialized instance of T.
-                    // ✓ While this reference exists, the memory the pointer points to must not get mutated (except inside UnsafeCell).
-                    parent.as_ref()
-                };
-                unsafe {
-                    // SAFETY: When calling `LinkedList::remove`, the caller must ensure that:
-                    // ✓ The given node-to-be-removed is not a part of any other linked list.
-                    parent.children.lock().unwrap().remove(this.frame.into());
-                }
-            } else {
-                // This frame lacks a parent; it is the root `Traced` in its futures tree.
-                task::deregister(this.frame.into())
-            }
-        }
+        polled: bool,
     }
 }
 
@@ -56,8 +24,8 @@ impl<F> Traced<F> {
     pub fn new(future: F, location: Location) -> Self {
         Self {
             future,
+            frame: Frame::new(location),
             polled: false,
-            frame: Frame::uninitialized(location),
         }
     }
 }
@@ -68,19 +36,28 @@ where
 {
     type Output = <F as Future>::Output;
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<<Self as Future>::Output> {
-        let this = self.project();
-
-        if !*this.polled {
-            *this.polled = true;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<<Self as Future>::Output> {
+        // Upon the first invocation of `poll`, initialize `frame`.
+        if !self.polled {
             unsafe {
-                // SAFETY: Callers of `Frame::initialize` must ensure that:
-                // ✓ The method is only invoked once (ensured by `this.polled`).
-                this.frame.initialize();
+                // SAFETY: `Frame::initialize` must only be called once.
+                // This is enforced by checking `!self.polled`.
+                Frame::initialize(self.as_mut().project().frame);
             }
+            *self.as_mut().project().polled = true;
         }
 
-        // poll the future under the new current frame
-        this.frame.run(|| Future::poll(this.future, cx))
+        let frame = Some(NonNull::from(&self.frame));
+        let future = self.as_mut().project().future;
+
+        crate::frame::ACTIVE_FRAME.with(|active_frame| {
+            // replace the previously active frame with
+            let previous_frame = active_frame.replace(frame);
+            // poll the inner future
+            let ret = Future::poll(future, cx);
+            // restore the previously active frame
+            active_frame.set(previous_frame);
+            ret
+        })
     }
 }
