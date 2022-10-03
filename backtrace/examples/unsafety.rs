@@ -1,4 +1,7 @@
+#![feature(future_join)]
+
 use async_backtrace::backtrace;
+use std::future::join;
 
 #[tokio::main]
 async fn main() {

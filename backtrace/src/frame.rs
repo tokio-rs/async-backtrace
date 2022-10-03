@@ -21,6 +21,8 @@ pub struct Frame {
     _pinned: PhantomPinned,
 }
 
+static_assertions::assert_eq_size!([u8; 104], Frame);
+
 impl Drop for Frame {
     fn drop(&mut self) {
         let this = NonNull::from(self);
@@ -38,7 +40,7 @@ impl Drop for Frame {
 
 thread_local! {
     /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
-    pub(crate) static ACTIVE_FRAME: std::cell::Cell<Option<NonNull<Frame>>>  = const { Cell::new(None) };
+    static ACTIVE_FRAME: std::cell::Cell<Option<NonNull<Frame>>>  = const { Cell::new(None) };
 }
 
 impl Frame {
@@ -68,6 +70,26 @@ impl Frame {
         } else {
             crate::task::register(NonNull::from(self));
         }
+    }
+
+    pub(crate) fn with_frame(&self) -> FrameGuard {
+        let active = NonNull::from(self);
+        let parent = ACTIVE_FRAME.with(|active_frame| active_frame.replace(Some(active)));
+        FrameGuard { parent, active }
+    }
+}
+
+pub(crate) struct FrameGuard {
+    parent: Option<NonNull<Frame>>,
+    active: NonNull<Frame>,
+}
+
+impl Drop for FrameGuard {
+    fn drop(&mut self) {
+        crate::frame::ACTIVE_FRAME.with(|active_frame| {
+            let prev = active_frame.replace(self.parent);
+            debug_assert!(prev == Some(NonNull::from(self.active)));
+        });
     }
 }
 
@@ -137,5 +159,6 @@ fn display<W: core::fmt::Write>(
         i += 1;
     });
 
-    Ok(())
+    // releasing the mutex guard must be the very last thing that happens
+    Ok(drop(children))
 }

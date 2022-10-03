@@ -16,7 +16,8 @@ static TASKS: Lazy<Mutex<Set<Task, BuildHasherDefault<FxHasher>>>> = Lazy::new(M
 pub fn dump() {
     TASKS.lock().unwrap().iter().for_each(|frame| {
         let frame = unsafe { frame.0.as_ref() };
-        println!("{}", frame);
+        let pp = frame.to_string();
+        println!("{}", pp);
     });
 }
 

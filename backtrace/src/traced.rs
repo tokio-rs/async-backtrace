@@ -1,7 +1,7 @@
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
-use std::ptr::NonNull;
+use std::marker::PhantomPinned;
 
 use crate::frame::Frame;
 use crate::location::Location;
@@ -16,8 +16,12 @@ pin_project! {
         // #[pin]
         frame: Frame,
         polled: bool,
+        _pinned: PhantomPinned,
     }
 }
+
+unsafe impl<F: Send> Send for Traced<F> {}
+unsafe impl<F: Sync> Sync for Traced<F> {}
 
 impl<F> Traced<F> {
     /// Include the given `future` in taskdumps with the given `location`.
@@ -26,6 +30,7 @@ impl<F> Traced<F> {
             future,
             frame: Frame::new(location),
             polled: false,
+            _pinned: PhantomPinned,
         }
     }
 }
@@ -36,6 +41,7 @@ where
 {
     type Output = <F as Future>::Output;
 
+    #[track_caller]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<<Self as Future>::Output> {
         // Upon the first invocation of `poll`, initialize `frame`.
         if !self.polled {
@@ -47,17 +53,7 @@ where
             *self.as_mut().project().polled = true;
         }
 
-        let frame = Some(NonNull::from(&self.frame));
-        let future = self.as_mut().project().future;
-
-        crate::frame::ACTIVE_FRAME.with(|active_frame| {
-            // replace the previously active frame with
-            let previous_frame = active_frame.replace(frame);
-            // poll the inner future
-            let ret = Future::poll(future, cx);
-            // restore the previously active frame
-            active_frame.set(previous_frame);
-            ret
-        })
+        let _frame_guard = self.as_ref().frame.with_frame();
+        self.as_mut().project().future.poll(cx)
     }
 }
