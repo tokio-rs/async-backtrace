@@ -1,37 +1,40 @@
 use std::{cell::Cell, marker::PhantomPinned, ptr::NonNull, sync::Mutex};
 
-use crate::{
-    location::Location,
-    linked_list,
-};
+use crate::{linked_list, location::Location};
 
 type Siblings = linked_list::Pointers<Frame>;
 type Children = linked_list::LinkedList<Frame, <Frame as linked_list::Link>::Target>;
 
-
 pub struct Frame {
+    /// The source location associated with this frame.
     location: Location,
+
+    /// The parent of this frame (if any).
     parent: Option<NonNull<Frame>>,
+
+    /// The sub-frames of this frame.
     children: Mutex<Children>,
+
+    /// The siblings of this frame.
     siblings: Siblings,
+
     _pinned: PhantomPinned,
 }
 
 impl Drop for Frame {
     fn drop(&mut self) {
-        let raw = NonNull::from(self);
+        let this = NonNull::from(self);
         unsafe {
-            if let Some(parent) = raw.as_ref().parent {
+            if let Some(parent) = this.as_ref().parent {
                 // remove this frame as a child of its parent
-                parent.as_ref().children.lock().unwrap().remove(raw);
+                parent.as_ref().children.lock().unwrap().remove(this);
             } else {
                 // this is a task; deregister it
-                crate::task::deregister(raw);
+                crate::task::deregister(this);
             }
         }
     }
 }
-
 
 thread_local! {
     /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
@@ -51,12 +54,17 @@ impl Frame {
     }
 
     /// Initialize the given `Frame`.
-    /// 
+    ///
     /// **SAFETY:** Must only be called once.
     pub(crate) unsafe fn initialize(&mut self) {
         if let Some(parent) = ACTIVE_FRAME.with(Cell::get) {
             self.parent = Some(parent);
-            parent.as_ref().children.lock().unwrap().push_front(NonNull::from(self));
+            parent
+                .as_ref()
+                .children
+                .lock()
+                .unwrap()
+                .push_front(NonNull::from(self));
         } else {
             crate::task::register(NonNull::from(self));
         }
@@ -131,4 +139,3 @@ fn display<W: core::fmt::Write>(
 
     Ok(())
 }
-
