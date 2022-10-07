@@ -24,7 +24,7 @@ macro_rules! location {
     }};
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct Location {
     pub fn_name: &'static str,
     pub file_name: &'static str,

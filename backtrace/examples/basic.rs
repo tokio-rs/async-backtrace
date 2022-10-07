@@ -17,7 +17,9 @@ async fn bar() {
 
 #[backtrace]
 async fn baz() {
-    tokio::join!(fiz(), buz());
+    let a = fiz();
+    let b = buz();
+    tokio::join!(Box::pin(fiz()), Box::pin(buz()));
 }
 
 #[backtrace]
@@ -32,5 +34,9 @@ async fn buz() {
 
 #[backtrace]
 async fn dump() {
-    async_backtrace::dump()
+    println!("{}", async_backtrace::tasks());
+    tokio::task::yield_now().await;
+    println!("{}", async_backtrace::tasks());
+    tokio::task::yield_now().await;
+    println!("{}", async_backtrace::tasks());
 }

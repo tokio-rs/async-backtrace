@@ -9,12 +9,15 @@ use crate::location::Location;
 use pin_project_lite::pin_project;
 
 pin_project! {
-    /// Includes the wrapped future `F` in taskdumps.
+    /// Includes a given future in taskdumps.
     pub struct Traced<F> {
+        // The wrapped future.
         #[pin]
         future: F,
-        // #[pin]
+        // Metadata about the wrapped future.
+        #[pin]
         frame: Frame,
+        // True if the future hasn't been polled yet.
         polled: bool,
         _pinned: PhantomPinned,
     }
@@ -22,6 +25,7 @@ pin_project! {
 
 unsafe impl<F: Send> Send for Traced<F> {}
 unsafe impl<F: Sync> Sync for Traced<F> {}
+impl<F: core::panic::UnwindSafe> core::panic::UnwindSafe for Traced<F> {}
 
 impl<F> Traced<F> {
     /// Include the given `future` in taskdumps with the given `location`.
@@ -42,18 +46,8 @@ where
     type Output = <F as Future>::Output;
 
     #[track_caller]
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<<Self as Future>::Output> {
-        // Upon the first invocation of `poll`, initialize `frame`.
-        if !self.polled {
-            unsafe {
-                // SAFETY: `Frame::initialize` must only be called once.
-                // This is enforced by checking `!self.polled`.
-                Frame::initialize(self.as_mut().project().frame);
-            }
-            *self.as_mut().project().polled = true;
-        }
-
-        let _frame_guard = self.as_ref().frame.with_frame();
-        self.as_mut().project().future.poll(cx)
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<<Self as Future>::Output> {
+        let this = self.project();
+        this.frame.in_scope(|| this.future.poll(cx))
     }
 }

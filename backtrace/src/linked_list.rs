@@ -4,7 +4,7 @@
 //! structure's APIs are `unsafe` as they require the caller to ensure the
 //! specified node is actually contained by the list.
 
-use core::cell::UnsafeCell;
+use crate::cell::UnsafeCell;
 use core::fmt;
 use core::marker::{PhantomData, PhantomPinned};
 use core::mem::ManuallyDrop;
@@ -20,8 +20,6 @@ pub(crate) struct LinkedList<L, T> {
 
     /// Linked list tail
     tail: Option<NonNull<T>>,
-
-    len: usize,
 
     /// Node type marker.
     _marker: PhantomData<*const L>,
@@ -90,13 +88,15 @@ pub(crate) struct Pointers<T> {
 struct PointersInner<T> {
     /// The previous node in the list. null if there is no previous node.
     ///
-    /// This field is accessed through pointer manipulation, so it is not dead code.
+    /// This field is accessed through pointer manipulation, so it is not dead
+    /// code.
     #[allow(dead_code)]
     prev: Option<NonNull<T>>,
 
     /// The next node in the list. null if there is no previous node.
     ///
-    /// This field is accessed through pointer manipulation, so it is not dead code.
+    /// This field is accessed through pointer manipulation, so it is not dead
+    /// code.
     #[allow(dead_code)]
     next: Option<NonNull<T>>,
 
@@ -116,7 +116,6 @@ impl<L, T> LinkedList<L, T> {
         LinkedList {
             head: None,
             tail: None,
-            len: 0,
             _marker: PhantomData,
         }
     }
@@ -143,22 +142,18 @@ impl<L: Link> LinkedList<L, L::Target> {
                 self.tail = Some(ptr);
             }
         }
-
-        self.len += 1;
-    }
-
-    pub(crate) fn len(&self) -> usize {
-        self.len
     }
 
     pub(crate) fn for_each<F>(&self, mut f: F)
     where
-        F: FnMut(&L::Target),
+        F: FnMut(&L::Target, bool),
     {
         let mut maybe_curr = self.head;
         while let Some(curr) = maybe_curr {
-            f(unsafe { curr.as_ref() });
-            maybe_curr = unsafe { L::pointers(curr).as_ref().get_next() };
+            let next = unsafe { L::pointers(curr).as_ref().get_next() };
+            let is_last = next.is_none();
+            f(unsafe { curr.as_ref() }, is_last);
+            maybe_curr = next;
         }
     }
 
@@ -199,8 +194,6 @@ impl<L: Link> LinkedList<L, L::Target> {
         L::pointers(node).as_mut().set_next(None);
         L::pointers(node).as_mut().set_prev(None);
 
-        self.len -= 1;
-
         Some(L::from_raw(node))
     }
 }
@@ -230,36 +223,40 @@ impl<T> Pointers<T> {
     pub(crate) fn get_prev(&self) -> Option<NonNull<T>> {
         // SAFETY: prev is the first field in PointersInner, which is #[repr(C)].
         unsafe {
-            let inner = self.inner.get();
-            let prev = inner as *const Option<NonNull<T>>;
-            ptr::read(prev)
+            self.inner.with(|inner| {
+                let prev = inner as *const Option<NonNull<T>>;
+                ptr::read(prev)
+            })
         }
     }
     pub(crate) fn get_next(&self) -> Option<NonNull<T>> {
         // SAFETY: next is the second field in PointersInner, which is #[repr(C)].
         unsafe {
-            let inner = self.inner.get();
-            let prev = inner as *const Option<NonNull<T>>;
-            let next = prev.add(1);
-            ptr::read(next)
+            self.inner.with(|inner| {
+                let prev = inner as *const Option<NonNull<T>>;
+                let next = prev.add(1);
+                ptr::read(next)
+            })
         }
     }
 
     fn set_prev(&mut self, value: Option<NonNull<T>>) {
         // SAFETY: prev is the first field in PointersInner, which is #[repr(C)].
         unsafe {
-            let inner = self.inner.get();
-            let prev = inner as *mut Option<NonNull<T>>;
-            ptr::write(prev, value);
+            self.inner.with_mut(|inner| {
+                let prev = inner as *mut Option<NonNull<T>>;
+                ptr::write(prev, value);
+            });
         }
     }
     fn set_next(&mut self, value: Option<NonNull<T>>) {
         // SAFETY: next is the second field in PointersInner, which is #[repr(C)].
         unsafe {
-            let inner = self.inner.get();
-            let prev = inner as *mut Option<NonNull<T>>;
-            let next = prev.add(1);
-            ptr::write(next, value);
+            self.inner.with_mut(|inner| {
+                let prev = inner as *mut Option<NonNull<T>>;
+                let next = prev.add(1);
+                ptr::write(next, value);
+            });
         }
     }
 }

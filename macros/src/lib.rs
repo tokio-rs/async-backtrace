@@ -15,7 +15,8 @@ pub fn backtrace(
     instrument_precise(item.clone()).unwrap_or_else(|_err| instrument_speculative(item))
 }
 
-/// Instrument the function, without parsing the function body (instead using the raw tokens).
+/// Instrument the function, without parsing the function body (instead using
+/// the raw tokens).
 fn instrument_speculative(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(item as MaybeItemFn);
     let instrumented_function_name = input.sig.ident.to_string();
@@ -78,7 +79,8 @@ impl Parse for MaybeItemFn {
 }
 
 /// A generic reference type for `MaybeItemFn`,
-/// that takes a generic block type `B` that implements `ToTokens` (eg. `TokenStream`, `Block`).
+/// that takes a generic block type `B` that implements `ToTokens` (eg.
+/// `TokenStream`, `Block`).
 #[derive(Debug, Clone)]
 struct MaybeItemFnRef<'a, B: ToTokens> {
     attrs: &'a Vec<Attribute>,
