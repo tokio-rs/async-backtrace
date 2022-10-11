@@ -9,7 +9,7 @@ use crate::location::Location;
 use pin_project_lite::pin_project;
 
 pin_project! {
-    /// Includes a given future in taskdumps.
+    /// A future whose [`Location`] is included in [taskdumps][crate::tasks] and [backtraces][crate::backtrace].
     pub struct Framed<F> {
         // The wrapped future.
         #[pin]
@@ -23,12 +23,11 @@ pin_project! {
     }
 }
 
-//unsafe impl<F: Send> Send for Framed<F> {}
-//unsafe impl<F: Sync> Sync for Framed<F> {}
 impl<F: core::panic::UnwindSafe> core::panic::UnwindSafe for Framed<F> {}
 
 impl<F> Framed<F> {
-    /// Include the given `future` in taskdumps with the given `location`.
+    /// Include the given `future` in [taskdumps][crate::tasks] and
+    /// [backtraces][crate::backtrace] with the given `location`.
     pub fn new(future: F, location: Location) -> Self {
         Self {
             future,

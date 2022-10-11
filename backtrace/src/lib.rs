@@ -1,8 +1,8 @@
 pub(crate) mod frame;
+pub(crate) mod framed;
 pub(crate) mod linked_list;
 pub(crate) mod location;
 pub(crate) mod task;
-pub(crate) mod framed;
 
 pub use frame::Frame;
 pub use framed::Framed;

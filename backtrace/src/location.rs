@@ -1,8 +1,8 @@
 /// Produces a [`Location`] when invoked in a function body.
-/// 
+///
 /// ```
 /// use async_backtrace::{location, Location};
-/// 
+///
 /// #[tokio::main]
 /// async fn main() {
 ///     assert_eq!(location!(), Location {
@@ -11,7 +11,7 @@
 ///         line_no: 7,
 ///         col_no: 16,
 ///     });
-/// 
+///
 ///     async {
 ///         assert_eq!(location!(), Location {
 ///             fn_name: "rust_out::main::{{closure}}::{{closure}}",

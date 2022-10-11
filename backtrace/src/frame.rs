@@ -3,8 +3,8 @@ use std::{marker::PhantomPinned, pin::Pin, ptr::NonNull};
 use crate::{
     cell::{Cell, UnsafeCell},
     linked_list,
-    Location,
     sync::Mutex,
+    Location,
 };
 
 pin_project_lite::pin_project! {
@@ -57,14 +57,29 @@ pin_project_lite::pin_project! {
 // mutation on shared pointers without locking.
 unsafe impl Send for Frame {}
 
-thread_local! {
-    /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
-    #[cfg(not(loom))]
-    static ACTIVE_FRAME: crate::cell::Cell<Option<NonNull<Frame>>> = const { Cell::new(None) };
+mod active_frame {
+    use super::Frame;
+    use crate::cell::Cell;
+    use core::ptr::NonNull;
 
-    /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
-    #[cfg(loom)]
-    static ACTIVE_FRAME: crate::cell::Cell<Option<NonNull<Frame>>> = Cell::new(None);
+    thread_local! {
+        /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
+        #[cfg(not(loom))]
+        static ACTIVE_FRAME: crate::cell::Cell<Option<NonNull<Frame>>> = const { Cell::new(None) };
+
+        /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
+        #[cfg(loom)]
+        static ACTIVE_FRAME: crate::cell::Cell<Option<NonNull<Frame>>> = Cell::new(None);
+    }
+
+    /// By calling this function, you pinky-swear to ensure that the value of
+    /// `ACTIVE_FRAME` is always a valid (dereferenceable) `NonNull<Frame>`.
+    pub(crate) unsafe fn with<F, R>(f: F) -> R
+    where
+        F: FnOnce(&Cell<Option<NonNull<Frame>>>) -> R,
+    {
+        ACTIVE_FRAME.with(f)
+    }
 }
 
 /// The kind of a [`Frame`].
@@ -156,12 +171,16 @@ impl Frame {
             })
         }
 
-        ACTIVE_FRAME.with(|current_cell| {
-            // Activate this frame.
-            let _restore = unsafe { activate(self, current_cell) };
-            // Finally, execute the given function.
-            f()
-        })
+        unsafe {
+            // SAFETY: We uphold `with`'s invariants by restoring the previously active
+            // frame after the execution of `f()`.
+            active_frame::with(|current_cell| {
+                // Activate this frame.
+                let _restore = activate(self, current_cell);
+                // Finally, execute the given function.
+                f()
+            })
+        }
     }
 
     /// Produces an iterator over this frame's ancestors.
@@ -218,10 +237,15 @@ impl Frame {
     }
 
     pub(crate) fn current() -> Option<NonNull<Frame>> {
-        ACTIVE_FRAME.with(Cell::get)
+        unsafe {
+            // SAFETY: This function does not provide the ability to mutate the cell, only
+            // to retrieve its contents.
+            active_frame::with(Cell::get)
+        }
     }
 
-    /// Executes the given function with a reference to the active frame on this thread (if any).
+    /// Executes the given function with a reference to the active frame on this
+    /// thread (if any).
     pub fn with_current<F, R>(f: F) -> R
     where
         F: FnOnce(Option<&Frame>) -> R,
@@ -236,13 +260,20 @@ impl Frame {
         unsafe fn into_ref<'a, 'b>(
             cell: &'a Cell<Option<NonNull<Frame>>>,
         ) -> &'a Cell<Option<&'b Frame>> {
+            // SAFETY: `Cell<NonNull<Frame>>` has the same layout has `Cell<&Frame>`,
+            // because both `Cell` and `NonNull` are `#[repr(transparent)]`, and because
+            // `*const Frame` has the same layout as `&Frame`.
             core::mem::transmute(cell)
         }
 
-        ACTIVE_FRAME.with(|cell| {
-            let cell = unsafe { into_ref(cell) };
-            f(cell)
-        })
+        unsafe {
+            // SAFETY: We uphold `with`'s invariants, by only providing `f` with a
+            // *reference* to the frame.
+            active_frame::with(|cell| {
+                let cell = into_ref(cell);
+                f(cell)
+            })
+        }
     }
 
     /// Produces the root frame of this futures tree.
