@@ -3,12 +3,12 @@ use std::{marker::PhantomPinned, pin::Pin, ptr::NonNull};
 use crate::{
     cell::{Cell, UnsafeCell},
     linked_list,
-    location::Location,
+    Location,
     sync::Mutex,
 };
 
 pin_project_lite::pin_project! {
-    /// A `Location` in an intrusive, doubly-linked tree of `Location`s.
+    /// A [`Location`] in an intrusive, doubly-linked tree of [`Location`]s.
     pub struct Frame {
         // The location associated with this frame.
         location: Location,
@@ -221,7 +221,15 @@ impl Frame {
         ACTIVE_FRAME.with(Cell::get)
     }
 
-    pub(crate) fn with_current<F, R>(f: F) -> R
+    /// Executes the given function with a reference to the active frame on this thread (if any).
+    pub fn with_current<F, R>(f: F) -> R
+    where
+        F: FnOnce(Option<&Frame>) -> R,
+    {
+        Frame::with_current_cell(|cell| f(cell.get()))
+    }
+
+    pub(crate) fn with_current_cell<F, R>(f: F) -> R
     where
         F: FnOnce(&Cell<Option<&Frame>>) -> R,
     {

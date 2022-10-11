@@ -6,7 +6,7 @@ use syn::{Attribute, Block, ItemFn, Signature, Visibility};
 mod expand;
 
 #[proc_macro_attribute]
-pub fn backtrace(
+pub fn framed(
     args: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {

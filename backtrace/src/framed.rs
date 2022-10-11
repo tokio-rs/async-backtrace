@@ -10,7 +10,7 @@ use pin_project_lite::pin_project;
 
 pin_project! {
     /// Includes a given future in taskdumps.
-    pub struct Traced<F> {
+    pub struct Framed<F> {
         // The wrapped future.
         #[pin]
         future: F,
@@ -23,11 +23,11 @@ pin_project! {
     }
 }
 
-unsafe impl<F: Send> Send for Traced<F> {}
-unsafe impl<F: Sync> Sync for Traced<F> {}
-impl<F: core::panic::UnwindSafe> core::panic::UnwindSafe for Traced<F> {}
+//unsafe impl<F: Send> Send for Framed<F> {}
+//unsafe impl<F: Sync> Sync for Framed<F> {}
+impl<F: core::panic::UnwindSafe> core::panic::UnwindSafe for Framed<F> {}
 
-impl<F> Traced<F> {
+impl<F> Framed<F> {
     /// Include the given `future` in taskdumps with the given `location`.
     pub fn new(future: F, location: Location) -> Self {
         Self {
@@ -39,7 +39,7 @@ impl<F> Traced<F> {
     }
 }
 
-impl<F> Future for Traced<F>
+impl<F> Future for Framed<F>
 where
     F: Future,
 {

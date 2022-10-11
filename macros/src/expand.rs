@@ -101,7 +101,7 @@ fn gen_block<B: ToTokens>(
     // enter the span and then perform the rest of the body.
     if async_context {
         quote!(
-            async_backtrace::Traced::new(
+            async_backtrace::Framed::new(
                 async move { #block },
                 async_backtrace::location!(),
             ).await

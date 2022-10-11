@@ -18,7 +18,7 @@ impl Task {
         })
     }*/
 
-    pub(super) fn display_nonblocking(&self) -> std::fmt::Result {}
+    //pub(super) fn display_nonblocking(&self) -> std::fmt::Result {}
 }
 
 unsafe impl Send for Task {}

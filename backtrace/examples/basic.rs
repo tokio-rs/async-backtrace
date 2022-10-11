@@ -1,38 +1,38 @@
-use async_backtrace::backtrace;
+use async_backtrace::framed;
 
 #[tokio::main]
 async fn main() {
     foo().await;
 }
 
-#[backtrace]
+#[framed]
 async fn foo() {
     bar().await;
 }
 
-#[backtrace]
+#[framed]
 async fn bar() {
     baz().await;
 }
 
-#[backtrace]
+#[framed]
 async fn baz() {
     let a = fiz();
     let b = buz();
     tokio::join!(Box::pin(fiz()), Box::pin(buz()));
 }
 
-#[backtrace]
+#[framed]
 async fn fiz() {
     tokio::task::yield_now().await;
 }
 
-#[backtrace]
+#[framed]
 async fn buz() {
     dump().await;
 }
 
-#[backtrace]
+#[framed]
 async fn dump() {
     println!("{}", async_backtrace::tasks());
     tokio::task::yield_now().await;

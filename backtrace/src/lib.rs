@@ -1,14 +1,15 @@
 pub(crate) mod frame;
 pub(crate) mod linked_list;
-pub mod location;
+pub(crate) mod location;
 pub(crate) mod task;
-pub(crate) mod traced;
+pub(crate) mod framed;
 
 pub use frame::Frame;
+pub use framed::Framed;
+pub use location::Location;
+pub use task::Tasks;
 
-pub use traced::Traced;
-
-pub use async_backtrace_macros::backtrace;
+pub use async_backtrace_macros::framed;
 
 pub const fn tasks() -> task::Tasks {
     task::Tasks::new()
@@ -16,10 +17,10 @@ pub const fn tasks() -> task::Tasks {
 
 pub(crate) mod sync {
     #[cfg(loom)]
-    pub(crate) use loom::sync::{Mutex, MutexGuard};
+    pub(crate) use loom::sync::Mutex;
 
     #[cfg(not(loom))]
-    pub(crate) use std::sync::{Mutex, MutexGuard};
+    pub(crate) use std::sync::Mutex;
 }
 
 pub(crate) mod cell {
