@@ -1,3 +1,5 @@
+/// A test that async-backtrace is well-behaved when frames are await'ed inside
+/// a drop guard.
 mod util;
 use async_backtrace::framed;
 

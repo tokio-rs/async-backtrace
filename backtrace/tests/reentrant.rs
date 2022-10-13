@@ -1,3 +1,5 @@
+/// A test that a blocking threaddump does not deadlock a program when requested
+/// from within a `framed` task.
 mod util;
 use async_backtrace::framed;
 

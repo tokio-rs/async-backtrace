@@ -1,9 +1,9 @@
-// futures::executor::block_on
-
-// idea: create a tree one-level deep, block on poll, and then request a task
-// dump in another thread. idea: use executor_blockon inside the drop of an
-// async task
-
+/// A test that async-backtrace is well-behaved under contention.
+///
+/// In this test, two threads are spawned:
+/// 1. Thread 1 executes a `framed` future, which requests a blocking taskdump
+/// three times in different ways (immediately, in a sub-frame, and upon drop).
+/// 2. Thread 2 requests a blocking taskdump.
 mod util;
 use async_backtrace::framed;
 

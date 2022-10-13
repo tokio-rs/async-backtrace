@@ -1,4 +1,6 @@
-///
+/// A test that a non-blocking taskdump will not deadlock, even if requested
+/// from insided a framed future that spawns a scoped thread that requests the
+/// task dump.
 mod util;
 use async_backtrace::framed;
 
