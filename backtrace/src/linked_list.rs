@@ -1,8 +1,36 @@
+// Copyright (c) 2022 Tokio Contributors
+//
+// Permission is hereby granted, free of charge, to any
+// person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the
+// Software without restriction, including without
+// limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of
+// the Software, and to permit persons to whom the Software
+// is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice
+// shall be included in all copies or substantial portions
+// of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+// ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+// TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+// PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+// SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+// IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
 //! An intrusive double linked list of data.
 //!
 //! The data structure supports tracking pinned nodes. Most of the data
 //! structure's APIs are `unsafe` as they require the caller to ensure the
 //! specified node is actually contained by the list.
+//!
+//! [Adapted from Tokio.](https://github.com/tokio-rs/tokio/blob/master/tokio/src/util/linked_list.rs)
 
 use crate::cell::UnsafeCell;
 use core::fmt;
@@ -108,6 +136,11 @@ struct PointersInner<T> {
 unsafe impl<T: Send> Send for Pointers<T> {}
 unsafe impl<T: Sync> Sync for Pointers<T> {}
 
+pub(crate) struct Iter<'a, T: Link> {
+    _list: &'a LinkedList<T, T::Target>,
+    curr: Option<NonNull<T::Target>>,
+}
+
 // ===== impl LinkedList =====
 
 impl<L, T> LinkedList<L, T> {
@@ -117,6 +150,16 @@ impl<L, T> LinkedList<L, T> {
             head: None,
             tail: None,
             _marker: PhantomData,
+        }
+    }
+
+    pub(crate) fn iter(&self) -> Iter<'_, L>
+    where
+        L: Link<Target = T>,
+    {
+        Iter {
+            _list: self,
+            curr: self.head,
         }
     }
 }
@@ -141,19 +184,6 @@ impl<L: Link> LinkedList<L, L::Target> {
             if self.tail.is_none() {
                 self.tail = Some(ptr);
             }
-        }
-    }
-
-    pub(crate) fn for_each<F>(&self, mut f: F)
-    where
-        F: FnMut(&L::Target, bool),
-    {
-        let mut maybe_curr = self.head;
-        while let Some(curr) = maybe_curr {
-            let next = unsafe { L::pointers(curr).as_ref().get_next() };
-            let is_last = next.is_none();
-            f(unsafe { curr.as_ref() }, is_last);
-            maybe_curr = next;
         }
     }
 
@@ -269,5 +299,20 @@ impl<T> fmt::Debug for Pointers<T> {
             .field("prev", &prev)
             .field("next", &next)
             .finish()
+    }
+}
+
+// ===== impl Iter =====
+
+impl<'a, T> Iterator for Iter<'a, T>
+where
+    T: Link,
+{
+    type Item = T::Handle;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.curr;
+        self.curr = curr.and_then(|curr| unsafe { T::pointers(curr).as_ref() }.get_next());
+        curr.map(|curr| unsafe { T::from_raw(curr) })
     }
 }

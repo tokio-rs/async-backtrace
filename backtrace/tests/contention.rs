@@ -11,7 +11,7 @@ use async_backtrace::framed;
 fn contention() {
     util::model(|| {
         let handle_a = util::thread::spawn(|| util::run(outer()));
-        let handle_b = util::thread::spawn(|| async_backtrace::tasks().to_string());
+        let handle_b = util::thread::spawn(|| async_backtrace::taskdump(true));
         handle_a.join().unwrap();
         handle_b.join().unwrap();
     });
@@ -19,12 +19,12 @@ fn contention() {
 
 #[framed]
 pub async fn outer() {
-    let _defer = util::defer(|| async_backtrace::tasks().to_string());
-    async_backtrace::tasks().to_string();
+    let _defer = util::defer(|| async_backtrace::taskdump(true));
+    async_backtrace::taskdump(true);
     inner().await;
 }
 
 #[framed]
 pub async fn inner() {
-    async_backtrace::tasks().to_string();
+    async_backtrace::taskdump(true);
 }

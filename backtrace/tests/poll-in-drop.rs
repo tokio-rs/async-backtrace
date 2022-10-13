@@ -16,7 +16,7 @@ fn poll_in_drop() {
 
     #[framed]
     async fn inner() {
-        let dump = async_backtrace::tasks().to_string();
+        let dump = async_backtrace::taskdump(true);
         pretty_assertions::assert_str_eq!(util::strip(dump), "\
 ╼ poll_in_drop::poll_in_drop::outer<poll_in_drop::util::Defer<poll_in_drop::poll_in_drop::{{closure}}::{{closure}}, ()>>::{{closure}} at backtrace/tests/poll-in-drop.rs:LINE:COL
   └╼ poll_in_drop::poll_in_drop::inner::{{closure}} at backtrace/tests/poll-in-drop.rs:LINE:COL");

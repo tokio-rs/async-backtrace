@@ -8,7 +8,7 @@ fn reentrant() {
 
 #[framed]
 async fn outer() {
-    let dump = async_backtrace::tasks().to_string();
+    let dump = async_backtrace::taskdump(true);
     pretty_assertions::assert_str_eq!(
         util::strip(dump),
         "\
@@ -19,7 +19,7 @@ async fn outer() {
 
 #[framed]
 async fn inner() {
-    let dump = async_backtrace::tasks().to_string();
+    let dump = async_backtrace::taskdump(true);
     pretty_assertions::assert_str_eq!(
         util::strip(dump),
         "\

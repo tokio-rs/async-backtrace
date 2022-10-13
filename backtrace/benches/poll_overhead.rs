@@ -1,4 +1,4 @@
-use async_backtrace::backtrace;
+use async_backtrace::framed;
 use criterion::{
     black_box, criterion_group, criterion_main, measurement::Measurement, Bencher, BenchmarkGroup,
     Criterion,
@@ -87,7 +87,7 @@ fn bench_poll_baseline<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup<
 }
 
 fn bench_root_poll_first<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup<'_, M>) {
-    #[backtrace]
+    #[framed]
     async fn root() {
         TestFuture.await
     }
@@ -110,7 +110,7 @@ fn bench_root_poll_first<M: Measurement<Value = Duration>>(c: &mut BenchmarkGrou
 }
 
 fn bench_root_poll_rest<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup<'_, M>) {
-    #[backtrace]
+    #[framed]
     async fn root() {
         TestFuture.await
     }
@@ -134,9 +134,9 @@ fn bench_root_poll_rest<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup
 }
 
 fn bench_leaf_poll_first<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup<'_, M>) {
-    #[backtrace]
+    #[framed]
     async fn root<'a, M: Measurement<Value = Duration>>(b: &mut Bencher<'_, M>) {
-        #[backtrace]
+        #[framed]
         async fn leaf() {
             TestFuture.await
         }
@@ -165,9 +165,9 @@ fn bench_leaf_poll_first<M: Measurement<Value = Duration>>(c: &mut BenchmarkGrou
 }
 
 fn bench_leaf_poll_rest<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup<'_, M>) {
-    #[backtrace]
+    #[framed]
     async fn root<'a, M: Measurement<Value = Duration>>(b: &mut Bencher<'_, M>) {
-        #[backtrace]
+        #[framed]
         async fn leaf() {
             TestFuture.await
         }

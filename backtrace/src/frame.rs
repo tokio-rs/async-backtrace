@@ -1,4 +1,4 @@
-use std::{marker::PhantomPinned, pin::Pin, ptr::NonNull};
+use std::{iter::FusedIterator, marker::PhantomPinned, pin::Pin, ptr::NonNull};
 
 use crate::{
     cell::{Cell, UnsafeCell},
@@ -12,9 +12,6 @@ pin_project_lite::pin_project! {
     pub struct Frame {
         // The location associated with this frame.
         location: Location,
-
-        // Have the below fields been initialized yet?
-        initialized: bool,
 
         // The kind of this frame — either a root or a node.
         kind: Kind,
@@ -33,7 +30,7 @@ pin_project_lite::pin_project! {
     impl PinnedDrop for Frame {
         fn drop(this: Pin<&mut Self>) {
             // If this frame has not yet been initialized, there's no need to do anything special upon drop.
-            if !this.initialized {
+            if this.is_uninitialized() {
                 return;
             }
 
@@ -42,11 +39,11 @@ pin_project_lite::pin_project! {
             if let Some(parent) = this.parent() {
                 // remove this frame as a child of its parent
                 unsafe {
-                    parent.children.with_mut(|children| (&mut *children).remove(this.into()));
+                    parent.children.with_mut(|children| (*children).remove(this.into()));
                 }
             } else {
                 // this is a task; deregister it
-                crate::task::deregister(this);
+                crate::tasks::deregister(this);
             }
         }
     }
@@ -56,6 +53,8 @@ pin_project_lite::pin_project! {
 // contain any pointers to thread-local storage, nor does it enable interior
 // mutation on shared pointers without locking.
 unsafe impl Send for Frame {}
+
+static_assertions::assert_eq_size!(Frame, [u8; 96]);
 
 mod active_frame {
     use super::Frame;
@@ -84,6 +83,9 @@ mod active_frame {
 
 /// The kind of a [`Frame`].
 enum Kind {
+    /// The frame is not yet initialized.
+    Uninitialized,
+
     /// The frame is the root node in its tree.
     Root {
         /// This mutex must be locked when modifying the
@@ -109,10 +111,7 @@ impl Frame {
     pub fn new(location: Location) -> Self {
         Self {
             location,
-            initialized: false,
-            kind: Kind::Node {
-                parent: NonNull::dangling(),
-            },
+            kind: Kind::Uninitialized,
             children: UnsafeCell::new(linked_list::LinkedList::new()),
             siblings: linked_list::Pointers::new(),
             _pinned: PhantomPinned,
@@ -138,16 +137,11 @@ impl Frame {
         // `await` point.
         unsafe fn activate<'a>(
             mut frame: Pin<&'a mut Frame>,
-            current_cell: &'a Cell<Option<NonNull<Frame>>>,
+            active: &'a Cell<Option<NonNull<Frame>>>,
         ) -> impl Drop + 'a {
             // If needed, initialize this frame.
-            if !frame.initialized {
-                *frame.as_mut().project().initialized = true;
-                let maybe_parent = if let Some(parent) = current_cell.get() {
-                    Some(parent.as_ref())
-                } else {
-                    None
-                };
+            if frame.is_uninitialized() {
+                let maybe_parent = active.get().map(|parent| parent.as_ref());
                 frame.as_mut().initialize_unchecked(maybe_parent)
             }
 
@@ -162,11 +156,11 @@ impl Frame {
             };
 
             // Replace the previously-active frame with this frame.
-            let previously_active = current_cell.replace(Some(frame.into()));
+            let previously_active = active.replace(Some(frame.into()));
 
             // At the end of this scope, restore the previously-active frame.
             crate::defer(move || {
-                current_cell.set(previously_active);
+                active.set(previously_active);
                 drop(maybe_mutex_guard);
             })
         }
@@ -174,23 +168,21 @@ impl Frame {
         unsafe {
             // SAFETY: We uphold `with`'s invariants by restoring the previously active
             // frame after the execution of `f()`.
-            active_frame::with(|current_cell| {
+            active_frame::with(|active| {
                 // Activate this frame.
-                let _restore = activate(self, current_cell);
+                let _restore = activate(self, active);
                 // Finally, execute the given function.
                 f()
             })
         }
     }
 
-    /// Produces an iterator over this frame's ancestors.
-    pub fn backtrace(&self) -> impl Iterator<Item = &Frame> {
-        let mut next = Some(self);
-        core::iter::from_fn(move || {
-            let curr = next;
-            next = curr.and_then(Frame::parent);
-            curr
-        })
+    /// Produces a boxed slice over this frame's ancestors.
+    pub fn backtrace_locations(&self) -> Box<[Location]> {
+        let len = self.backtrace().count();
+        let mut vec = Vec::with_capacity(len);
+        vec.extend(self.backtrace().map(Frame::location));
+        vec.into_boxed_slice()
     }
 
     /// Produces the [`Location`] associated with this frame.
@@ -198,15 +190,9 @@ impl Frame {
         self.location
     }
 
-    /// Produces the parent frame of this frame.
-    pub(crate) fn parent(&self) -> Option<&Frame> {
-        if !self.initialized {
-            return None;
-        } else if let Kind::Node { parent } = self.kind {
-            Some(unsafe { parent.as_ref() })
-        } else {
-            None
-        }
+    /// Produces `true` if this `Frame` is uninitialized, otherwise false.
+    fn is_uninitialized(&self) -> bool {
+        self.kind.is_uninitialized()
     }
 
     /// Initializes this frame, unconditionally.
@@ -221,7 +207,7 @@ impl Frame {
                 // ...it is the root of its tree,
                 *self.as_mut().project().kind = Kind::root();
                 // ...and must be registered as a task.
-                crate::task::register(self.into_ref().get_ref());
+                crate::tasks::register(self.into_ref().get_ref());
             }
             // This frame has a parent...
             Some(parent) => {
@@ -231,29 +217,21 @@ impl Frame {
                 let this = NonNull::from(self.into_ref().get_ref());
                 parent
                     .children
-                    .with_mut(|children| (&mut *children).push_front(this));
+                    .with_mut(|children| (*children).push_front(this));
             }
         };
     }
 
-    pub(crate) fn current() -> Option<NonNull<Frame>> {
-        unsafe {
-            // SAFETY: This function does not provide the ability to mutate the cell, only
-            // to retrieve its contents.
-            active_frame::with(Cell::get)
-        }
-    }
-
     /// Executes the given function with a reference to the active frame on this
     /// thread (if any).
-    pub fn with_current<F, R>(f: F) -> R
+    pub fn with_active<F, R>(f: F) -> R
     where
         F: FnOnce(Option<&Frame>) -> R,
     {
-        Frame::with_current_cell(|cell| f(cell.get()))
+        Frame::with_active_cell(|cell| f(cell.get()))
     }
 
-    pub(crate) fn with_current_cell<F, R>(f: F) -> R
+    pub(crate) fn with_active_cell<F, R>(f: F) -> R
     where
         F: FnOnce(&Cell<Option<&Frame>>) -> R,
     {
@@ -276,15 +254,6 @@ impl Frame {
         }
     }
 
-    /// Produces the root frame of this futures tree.
-    pub(crate) fn root(&self) -> &Frame {
-        let mut frame = self;
-        while let Some(parent) = frame.parent() {
-            frame = parent;
-        }
-        return frame;
-    }
-
     /// Produces the mutex (if any) guarding this frame's children.
     pub(crate) fn mutex(&self) -> Option<&Mutex<()>> {
         if let Kind::Root { mutex } = &self.kind {
@@ -294,36 +263,31 @@ impl Frame {
         }
     }
 
-    pub(crate) unsafe fn fmt(
+    pub(crate) unsafe fn fmt<W: core::fmt::Write>(
         &self,
-        f: &mut std::fmt::Formatter<'_>,
-        recurse: bool,
+        w: &mut W,
+        subframes_locked: bool,
     ) -> std::fmt::Result {
         unsafe fn fmt_helper<W: core::fmt::Write>(
             mut f: &mut W,
             frame: &Frame,
             is_last: bool,
             prefix: &str,
-            recurse: bool,
+            subframes_locked: bool,
         ) -> core::fmt::Result {
             let location = frame.location();
-            let fn_fmt = location.fn_name;
-            let file_fmt = format!(
-                "{}:{}:{}",
-                location.file_name, location.line_no, location.col_no
-            );
-
             let current;
             let next;
 
             if is_last {
-                current = format!("{prefix}└╼ {fn_fmt} at {file_fmt}");
+                current = format!("{prefix}└╼ {location}");
                 next = format!("{}   ", prefix);
             } else {
-                current = format!("{prefix}├╼ {fn_fmt} at {file_fmt}");
+                current = format!("{prefix}├╼ {location}");
                 next = format!("{}│  ", prefix);
             }
 
+            // print all but the first three codepoints of current
             writeln!(&mut f, "{}", {
                 let mut current = current.chars();
                 current.next().unwrap();
@@ -332,11 +296,10 @@ impl Frame {
                 &current.as_str()
             })?;
 
-            if recurse {
-                frame.children.with(|children| {
-                    (&*children).for_each(|frame, is_last| {
-                        fmt_helper(f, frame, is_last, &next, recurse).unwrap();
-                    });
+            if subframes_locked {
+                frame.subframes().for_each(|frame| {
+                    let is_last = frame.next_frame().is_none();
+                    fmt_helper(f, frame, is_last, &next, true).unwrap();
                 });
             } else {
                 writeln!(&mut f, "{prefix}└┈ [POLLING]")?;
@@ -345,7 +308,109 @@ impl Frame {
             Ok(())
         }
 
-        fmt_helper(f, self, true, "  ", recurse)
+        fmt_helper(w, self, true, "  ", subframes_locked)
+    }
+}
+
+impl Frame {
+    /// Produces the parent frame of this frame.
+    pub(crate) fn parent(&self) -> Option<&Frame> {
+        if self.is_uninitialized() {
+            None
+        } else if let Kind::Node { parent } = self.kind {
+            Some(unsafe { parent.as_ref() })
+        } else {
+            None
+        }
+    }
+
+    /// Produces the root frame of this futures tree.
+    pub(crate) fn root(&self) -> &Frame {
+        let mut frame = self;
+        while let Some(parent) = frame.parent() {
+            frame = parent;
+        }
+        frame
+    }
+
+    /// Produces an iterator over this frame's ancestors.
+    pub fn backtrace(&self) -> impl Iterator<Item = &Frame> + FusedIterator {
+        /// An iterator that traverses up the tree of [`Frame`]s from a leaf.
+        #[derive(Clone)]
+        pub(crate) struct Backtrace<'a> {
+            frame: Option<&'a Frame>,
+        }
+
+        impl<'a> Backtrace<'a> {
+            pub(crate) fn from_leaf(frame: &'a Frame) -> Self {
+                Self { frame: Some(frame) }
+            }
+        }
+
+        impl<'a> Iterator for Backtrace<'a> {
+            type Item = &'a Frame;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                let curr = self.frame;
+                self.frame = curr.and_then(Frame::parent);
+                curr
+            }
+        }
+
+        impl<'a> FusedIterator for Backtrace<'a> {}
+
+        Backtrace::from_leaf(self)
+    }
+
+    /// Produces an iterator over this frame's less-recently in
+    pub(crate) fn subframes(&self) -> impl Iterator<Item = &Frame> + FusedIterator {
+        pub(crate) struct Subframes<'a> {
+            iter: linked_list::Iter<'a, Frame>,
+        }
+
+        impl<'a> Subframes<'a> {
+            pub(crate) fn from_parent(frame: &'a Frame) -> Self {
+                Self {
+                    iter: frame.children.with(|children| unsafe { &*children }.iter()),
+                }
+            }
+        }
+
+        impl<'a> Iterator for Subframes<'a> {
+            type Item = &'a Frame;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.iter.next().map(|frame| unsafe { frame.as_ref() })
+            }
+        }
+
+        impl<'a> FusedIterator for Subframes<'a> {}
+
+        Subframes::from_parent(self)
+    }
+
+    /// Produces this frame's previous (more-recently initialized) sibling (if
+    /// any).
+    pub fn prev_frame(&self) -> Option<&Frame> {
+        unsafe {
+            <Frame as linked_list::Link>::pointers(NonNull::from(self))
+                .as_ref()
+                .get_prev()
+                .as_ref()
+                .map(|f| f.as_ref())
+        }
+    }
+
+    /// Produces this frame's previous (less-recently initialized) sibling (if
+    /// any).
+    pub fn next_frame(&self) -> Option<&Frame> {
+        unsafe {
+            <Frame as linked_list::Link>::pointers(NonNull::from(self))
+                .as_ref()
+                .get_next()
+                .as_ref()
+                .map(|f| f.as_ref())
+        }
     }
 }
 
@@ -362,6 +427,11 @@ impl Kind {
         Kind::Node {
             parent: NonNull::from(parent),
         }
+    }
+
+    /// True if kind is [`Kind::Uninitialized`].
+    fn is_uninitialized(&self) -> bool {
+        matches!(&self, Kind::Uninitialized)
     }
 }
 

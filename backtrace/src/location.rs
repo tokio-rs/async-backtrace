@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use futures::Future;
+
 /// Produces a [`Location`] when invoked in a function body.
 ///
 /// ```
@@ -56,6 +60,8 @@ macro_rules! location {
 }
 
 /// A source code location in a function body.
+///
+/// To construct a `Location`, use [`location!()`].
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Location {
     /// The name of the surrounding function.
@@ -66,4 +72,26 @@ pub struct Location {
     pub line_no: u32,
     /// The column number of this location.
     pub col_no: u32,
+}
+
+impl Location {
+    /// Include the given future in taskdumps with this location.
+    pub fn frame<F>(self, f: F) -> impl Future<Output = F::Output>
+    where
+        F: Future,
+    {
+        crate::Framed::new(f, self)
+    }
+}
+
+impl Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Location {
+            fn_name,
+            file_name,
+            line_no,
+            col_no,
+        } = self;
+        f.write_fmt(format_args!("{fn_name} at {file_name}:{line_no}:{col_no}"))
+    }
 }

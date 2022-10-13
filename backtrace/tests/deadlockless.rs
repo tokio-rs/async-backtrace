@@ -9,7 +9,7 @@ fn deadlockless() {
 
 #[framed]
 async fn outer() {
-    let dump = std::thread::spawn(|| async_backtrace::tasks().to_string())
+    let dump = std::thread::spawn(|| async_backtrace::taskdump(true))
         .join()
         .unwrap();
     pretty_assertions::assert_str_eq!(
@@ -23,7 +23,7 @@ async fn outer() {
 
 #[framed]
 async fn inner() {
-    let dump = util::thread::spawn(|| async_backtrace::tasks().to_string())
+    let dump = util::thread::spawn(|| async_backtrace::taskdump(true))
         .join()
         .unwrap();
     pretty_assertions::assert_str_eq!(

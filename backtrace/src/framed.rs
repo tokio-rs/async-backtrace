@@ -26,8 +26,8 @@ pin_project! {
 impl<F: core::panic::UnwindSafe> core::panic::UnwindSafe for Framed<F> {}
 
 impl<F> Framed<F> {
-    /// Include the given `future` in [taskdumps][crate::tasks] and
-    /// [backtraces][crate::backtrace] with the given `location`.
+    /// Include the given `future` in taskdumps and
+    /// backtraces with the given `location`.
     pub fn new(future: F, location: Location) -> Self {
         Self {
             future,
