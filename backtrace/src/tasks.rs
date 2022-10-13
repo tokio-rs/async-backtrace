@@ -41,7 +41,7 @@ impl Task {
         let current_task: Option<NonNull<Frame>> =
             Frame::with_active(|maybe_frame| maybe_frame.map(|frame| frame.root().into()));
 
-        let maybe_lock = frame
+        let maybe_lock = &frame
             .mutex()
             // don't grab a lock if we're *in* the active task (it's already locked, then)
             .filter(|_| Some(self.0) != current_task)

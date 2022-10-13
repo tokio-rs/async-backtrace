@@ -18,13 +18,4 @@ fn contention() {
 }
 
 #[framed]
-pub async fn outer() {
-    let _defer = util::defer(|| async_backtrace::taskdump(true));
-    async_backtrace::taskdump(true);
-    inner().await;
-}
-
-#[framed]
-pub async fn inner() {
-    async_backtrace::taskdump(true);
-}
+pub async fn outer() {}

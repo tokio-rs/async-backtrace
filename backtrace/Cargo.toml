@@ -31,5 +31,5 @@ loom = "0.5.6"
 name = "poll_overhead"
 harness = false
 
-[profile.test]
-debug-assertions=false
+[profile.release]
+debug = true
