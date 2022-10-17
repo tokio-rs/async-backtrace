@@ -153,7 +153,15 @@ impl Frame {
             // If this is the root frame, lock its children. This lock is inherited by
             // `f()`.
             let maybe_mutex_guard = if let Kind::Root { mutex } = &frame.kind {
-                Some(mutex.lock().unwrap())
+                // Ignore poisoning. This is fine, since absolutely nothing between this line,
+                // and the execution of `drop(maybe_mutex_guard)` can unwind-panic, *except* for
+                // the execution of the user-provided function `f`. An unwind-panic of `f` will
+                // not make this crate's state inconsistent, since the parent frame is always
+                // restored by the below invocation of `crate::defer` upon its drop.
+                Some(match mutex.lock() {
+                    Ok(guard) => guard,
+                    Err(err) => err.into_inner(),
+                })
             } else {
                 None
             };
