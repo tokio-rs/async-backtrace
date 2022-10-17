@@ -19,10 +19,6 @@ pin_project_lite::pin_project! {
         // The children of this frame.
         children: UnsafeCell<Children>,
 
-        // The siblings of this frame.
-        #[pin]
-        siblings: Siblings,
-
         // Since `Frame` is part of an intrusive linked list, it must remain pinned.
         _pinned: PhantomPinned,
     }
@@ -55,7 +51,7 @@ pin_project_lite::pin_project! {
 unsafe impl Send for Frame {}
 
 #[cfg(not(loom))]
-static_assertions::assert_eq_size!(Frame, [u8; 96]);
+static_assertions::assert_eq_size!(Frame, [u8; 88]);
 
 mod active_frame {
     use super::Frame;
@@ -100,6 +96,9 @@ enum Kind {
     Node {
         /// The parent of this frame.
         parent: NonNull<Frame>,
+
+        /// The siblings of this frame.
+        siblings: Siblings,
     },
 }
 
@@ -116,7 +115,6 @@ impl Frame {
             location,
             kind: Kind::Uninitialized,
             children: UnsafeCell::new(linked_list::LinkedList::new()),
-            siblings: linked_list::Pointers::new(),
             _pinned: PhantomPinned,
         }
     }
@@ -328,7 +326,7 @@ impl Frame {
     pub(crate) fn parent(&self) -> Option<&Frame> {
         if self.is_uninitialized() {
             None
-        } else if let Kind::Node { parent } = self.kind {
+        } else if let Kind::Node { parent, .. } = self.kind {
             Some(unsafe { parent.as_ref() })
         } else {
             None
@@ -437,6 +435,7 @@ impl Kind {
     fn node(parent: &Frame) -> Self {
         Kind::Node {
             parent: NonNull::from(parent),
+            siblings: Siblings::new(),
         }
     }
 
@@ -458,9 +457,11 @@ unsafe impl linked_list::Link for Frame {
         ptr
     }
 
-    unsafe fn pointers(target: NonNull<Self>) -> NonNull<linked_list::Pointers<Self>> {
-        let me = target.as_ptr();
-        let field = ::std::ptr::addr_of_mut!((*me).siblings);
-        ::core::ptr::NonNull::new_unchecked(field)
+    unsafe fn pointers(mut target: NonNull<Self>) -> NonNull<linked_list::Pointers<Self>> {
+        if let Kind::Node { ref mut siblings, .. } = target.as_mut().kind {
+            NonNull::from(siblings)
+        } else {
+            unreachable!()
+        }
     }
 }
