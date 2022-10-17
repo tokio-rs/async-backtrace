@@ -5,7 +5,7 @@ use async_backtrace::framed;
 
 #[test]
 fn reentrant() {
-    util::run(outer())
+    util::model(|| util::run(outer()));
 }
 
 #[framed]
