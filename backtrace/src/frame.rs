@@ -62,14 +62,16 @@ mod active_frame {
     use crate::cell::Cell;
     use core::ptr::NonNull;
 
-    thread_local! {
+    #[cfg(loom)]
+    loom::thread_local! {
         /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
-        #[cfg(not(loom))]
-        static ACTIVE_FRAME: crate::cell::Cell<Option<NonNull<Frame>>> = const { Cell::new(None) };
-
-        /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
-        #[cfg(loom)]
         static ACTIVE_FRAME: crate::cell::Cell<Option<NonNull<Frame>>> = Cell::new(None);
+    }
+
+    #[cfg(not(loom))]
+    std::thread_local! {
+        /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
+        static ACTIVE_FRAME: crate::cell::Cell<Option<NonNull<Frame>>> = const { Cell::new(None) };
     }
 
     /// By calling this function, you pinky-swear to ensure that the value of
