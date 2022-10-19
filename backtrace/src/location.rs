@@ -40,7 +40,6 @@ macro_rules! location {
     () => {{
         macro_rules! fn_name {
             () => {{
-                async {}.await;
                 fn type_name_of_val<T: ?Sized>(_: &T) -> &'static str {
                     core::any::type_name::<T>()
                 }
