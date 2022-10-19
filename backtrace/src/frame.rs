@@ -54,9 +54,6 @@ pin_project_lite::pin_project! {
 // mutation on shared pointers without locking.
 unsafe impl Send for Frame {}
 
-#[cfg(not(loom))]
-static_assertions::assert_eq_size!(Frame, [u8; 96]);
-
 mod active_frame {
     use super::Frame;
     use crate::cell::Cell;
