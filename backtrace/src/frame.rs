@@ -81,6 +81,7 @@ mod active_frame {
 }
 
 /// The kind of a [`Frame`].
+#[repr(C, u8)]
 enum Kind {
     /// The frame is not yet initialized.
     Uninitialized,
@@ -94,11 +95,11 @@ enum Kind {
     },
     /// The frame is *not* the root node of its tree.
     Node {
-        /// The parent of this frame.
-        parent: NonNull<Frame>,
-
         /// The siblings of this frame.
         siblings: Siblings,
+
+        /// The parent of this frame.
+        parent: NonNull<Frame>,
     },
 }
 
@@ -458,10 +459,12 @@ unsafe impl linked_list::Link for Frame {
     }
 
     unsafe fn pointers(mut target: NonNull<Self>) -> NonNull<linked_list::Pointers<Self>> {
-        if let Kind::Node { ref mut siblings, .. } = target.as_mut().kind {
-            NonNull::from(siblings)
-        } else {
-            unreachable!()
-        }
+        let me = target.as_ptr();
+        let ptr = std::ptr::addr_of_mut!((*me).kind)
+            .cast::<usize>()
+            .offset(1)
+            .cast::<linked_list::Pointers<Self>>();
+        
+        NonNull::new_unchecked(ptr)
     }
 }
