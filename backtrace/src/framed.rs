@@ -17,8 +17,6 @@ pin_project! {
         // Metadata about the wrapped future.
         #[pin]
         frame: Frame,
-        // True if the future hasn't been polled yet.
-        polled: bool,
         _pinned: PhantomPinned,
     }
 }
