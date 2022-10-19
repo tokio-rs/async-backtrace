@@ -30,7 +30,6 @@ impl<F> Framed<F> {
         Self {
             future,
             frame: Frame::new(location),
-            polled: false,
             _pinned: PhantomPinned,
         }
     }
