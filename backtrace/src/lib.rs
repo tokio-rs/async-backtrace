@@ -6,7 +6,15 @@
 //! ```rust
 //! #[tokio::main]
 //! async fn main() {
-//!     foo().await;
+//!     tokio::select! {
+//!         _ = tokio::spawn(pending()) => {}
+//!         _ = foo() => {}
+//!     };
+//! }
+//!
+//! #[async_backtrace::framed]
+//! async fn pending() {
+//!     std::future::pending::<()>().await
 //! }
 //!
 //! #[async_backtrace::framed]
@@ -16,7 +24,7 @@
 //!
 //! #[async_backtrace::framed]
 //! async fn bar() {
-//!     tokio::join!(Box::pin(fiz()), Box::pin(buz()));
+//!     futures::join!(fiz(), buz());
 //! }
 //!
 //! #[async_backtrace::framed]
@@ -26,7 +34,7 @@
 //!
 //! #[async_backtrace::framed]
 //! async fn buz() {
-//!     println!("{}", tokio::spawn(baz()).await.unwrap());
+//!     println!("{}", baz().await);
 //! }
 //!
 //! #[async_backtrace::framed]
@@ -36,10 +44,12 @@
 //! ```
 //! The above program, when run, prints something like:
 //! ```text
-//! ╼ taskdump::foo::{{closure}} at backtrace/examples/taskdump.rs:6:1
-//!   └╼ taskdump::bar::{{closure}} at backtrace/examples/taskdump.rs:11:1
-//!   └╼ taskdump::buz::{{closure}} at backtrace/examples/taskdump.rs:21:1
-//! ╼ taskdump::baz::{{closure}} at backtrace/examples/taskdump.rs:26:1
+//! ╼ taskdump::foo::{{closure}} at backtrace/examples/taskdump.rs:14:1
+//!   └╼ taskdump::bar::{{closure}} at backtrace/examples/taskdump.rs:19:1
+//!      ├╼ taskdump::buz::{{closure}} at backtrace/examples/taskdump.rs:29:1
+//!      │  └╼ taskdump::baz::{{closure}} at backtrace/examples/taskdump.rs:34:1
+//!      └╼ taskdump::fiz::{{closure}} at backtrace/examples/taskdump.rs:24:1
+//! ╼ taskdump::pending::{{closure}} at backtrace/examples/taskdump.rs:9:1
 //! ```
 
 pub(crate) mod frame;

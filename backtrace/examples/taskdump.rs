@@ -26,7 +26,7 @@ async fn foo() {
 
 #[async_backtrace::framed]
 async fn bar() {
-    tokio::join!(Box::pin(fiz()), Box::pin(buz()));
+    futures::join!(fiz(), buz());
 }
 
 #[async_backtrace::framed]

@@ -18,7 +18,7 @@ static_assertions = "1.1.0"
 [dev-dependencies]
 core_affinity = "0.5.10"
 criterion = { version = "0.3.4", features = ["html_reports"] }
-futures = "0.3.21"
+futures = "0.3.25"
 pretty_assertions = "1.3.0"
 regex = "1.6.0"
 smol = "1.2.5"
