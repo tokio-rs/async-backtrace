@@ -9,29 +9,14 @@ use futures::Future;
 ///
 /// #[tokio::main]
 /// async fn main() {
-///     assert_eq!(location!(), Location {
-///         fn_name: "rust_out::main::{{closure}}",
-///         file_name: "src/location.rs",
-///         line_no: 7,
-///         col_no: 16,
-///     });
+///     assert_eq!(location!().to_string(), "rust_out::main::{{closure}} at src/location.rs:7:16");
 ///
 ///     async {
-///         assert_eq!(location!(), Location {
-///             fn_name: "rust_out::main::{{closure}}::{{closure}}",
-///             file_name: "src/location.rs",
-///             line_no: 15,
-///             col_no: 20,
-///         });
+///         assert_eq!(location!().to_string(), "rust_out::main::{{closure}}::{{closure}} at src/location.rs:10:20");
 ///     }.await;
 ///     
 ///     (|| async {
-///         assert_eq!(location!(), Location {
-///             fn_name: "rust_out::main::{{closure}}::{{closure}}::{{closure}}",
-///             file_name: "src/location.rs",
-///             line_no: 24,
-///             col_no: 20,
-///         });
+///         assert_eq!(location!().to_string(), "rust_out::main::{{closure}}::{{closure}}::{{closure}} at src/location.rs:14:20");
 ///     })().await;
 /// }
 /// ```
@@ -48,49 +33,87 @@ macro_rules! location {
                     .unwrap()
             }};
         }
-
-        $crate::Location {
-            fn_name: fn_name!(),
-            file_name: file!(),
-            line_no: line!(),
-            col_no: column!(),
-        }
+        $crate::Location::from_components(fn_name!(), &(file!(), line!(), column!()))
     }};
 }
 
 /// A source code location in a function body.
 ///
 /// To construct a `Location`, use [`location!()`].
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Location {
     /// The name of the surrounding function.
-    pub fn_name: &'static str,
-    /// The name of the file in which this location occurs.
-    pub file_name: &'static str,
-    /// The line number of this location.
-    pub line_no: u32,
-    /// The column number of this location.
-    pub col_no: u32,
+    name: Option<&'static str>,
+    /// The file name, line number, and column number on which the surrounding
+    /// function is defined.
+    rest: &'static (&'static str, u32, u32),
 }
 
 impl Location {
+    /// **DO NOT USE!** The signature of this method may change between
+    /// non-breaking releases.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub const fn from_components(
+        name: &'static str,
+        rest: &'static (&'static str, u32, u32),
+    ) -> Self {
+        Self {
+            name: Some(name),
+            rest,
+        }
+    }
+
     /// Include the given future in taskdumps with this location.
+    ///
+    /// ## Examples
+    /// ```
+    /// # async fn bar() {}
+    /// # async fn baz() {}
+    /// async fn foo() {
+    ///     async_backtrace::location!().frame(async move {
+    ///         bar().await;
+    ///         baz().await;
+    ///     }).await
+    /// }
+    /// ```
     pub fn frame<F>(self, f: F) -> impl Future<Output = F::Output>
     where
         F: Future,
     {
         crate::Framed::new(f, self)
     }
+
+    /// Produces the function name associated with this location.
+    pub const fn name(&self) -> Option<&str> {
+        self.name
+    }
+
+    /// Produces the file name associated with this location.
+    pub const fn file(&self) -> &str {
+        self.rest.0
+    }
+
+    /// Produces the line number associated with this location.
+    pub const fn line(&self) -> u32 {
+        self.rest.1
+    }
+
+    /// Produces the column number associated with this location.
+    pub const fn column(&self) -> u32 {
+        self.rest.2
+    }
 }
 
 impl Display for Location {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Location {
-            fn_name,
-            file_name,
-            line_no,
-            col_no,
-        } = self;
-        f.write_fmt(format_args!("{fn_name} at {file_name}:{line_no}:{col_no}"))
+        let file = self.file();
+        let line = self.line();
+        let column = self.column();
+        if let Some(name) = self.name() {
+            f.write_fmt(format_args!("{name} at {file}:{line}:{column}"))
+        } else {
+            f.write_fmt(format_args!("{file}:{line}:{column}"))
+        }
     }
 }

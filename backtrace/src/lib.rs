@@ -85,6 +85,7 @@ pub(crate) use tasks::tasks;
 ///         baz().await;
 ///     }).await
 /// }
+/// ```
 pub use async_backtrace_macros::framed;
 
 /// Produces a human-readable tree of task states.
@@ -122,10 +123,10 @@ pub fn taskdump(wait_for_running_tasks: bool) -> String {
 ///
 /// #[async_backtrace::framed]
 /// async fn baz() {
-///     assert_eq!(&async_backtrace::backtrace().unwrap()[..], &[
-///         Location { fn_name: "rust_out::baz::{{closure}}", file_name: "src/lib.rs", line_no: 20, col_no: 1 },
-///         Location { fn_name: "rust_out::bar::{{closure}}", file_name: "src/lib.rs", line_no: 15, col_no: 1 },
-///         Location { fn_name: "rust_out::foo::{{closure}}", file_name: "src/lib.rs", line_no: 10, col_no: 1 },
+///     assert_eq!(&async_backtrace::backtrace().unwrap().iter().map(|l| l.to_string()).collect::<Vec<_>>()[..], &[
+///         "rust_out::baz::{{closure}} at src/lib.rs:20:1",
+///         "rust_out::bar::{{closure}} at src/lib.rs:15:1",
+///         "rust_out::foo::{{closure}} at src/lib.rs:10:1",
 ///     ]);
 /// }
 /// ```
