@@ -183,3 +183,9 @@ pub(crate) fn defer<F: FnOnce() -> R, R>(f: F) -> impl Drop {
 
     Defer(Some(f))
 }
+
+#[doc(hidden)]
+/** NOT STABLE! DO NOT USE! */
+pub mod ඞ {
+    pub use crate::frame::Frame;
+}
