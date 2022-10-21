@@ -101,7 +101,7 @@ fn gen_block<B: ToTokens>(
     // enter the span and then perform the rest of the body.
     if async_context {
         quote!(
-            async_backtrace::location!().frame(async move { #block }).await
+            async_backtrace::frame!(async move { #block }).await
         )
     } else {
         quote_spanned!(block.span() => #block)

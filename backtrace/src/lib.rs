@@ -1,13 +1,14 @@
 //! Efficient, logical 'stack' traces of async functions.
 //!
-//! To use, annotate your async functions with `#[async_backtrace::framed]`.
+//! ## Usage
+//! To use, annotate your async functions with `#[async_backtrace::framed]`,
+//! like so:
 //!
-//! # Example
 //! ```rust
 //! #[tokio::main]
 //! async fn main() {
 //!     tokio::select! {
-//!         _ = tokio::spawn(pending()) => {}
+//!         _ = tokio::spawn(async_backtrace::frame!(pending())) => {}
 //!         _ = foo() => {}
 //!     };
 //! }
@@ -42,15 +43,58 @@
 //!     async_backtrace::taskdump(true)
 //! }
 //! ```
-//! The above program, when run, prints something like:
+//!
+//! This example program will print out something along the lines of:
+//!
 //! ```text
-//! ╼ taskdump::foo::{{closure}} at backtrace/examples/taskdump.rs:14:1
-//!   └╼ taskdump::bar::{{closure}} at backtrace/examples/taskdump.rs:19:1
-//!      ├╼ taskdump::buz::{{closure}} at backtrace/examples/taskdump.rs:29:1
-//!      │  └╼ taskdump::baz::{{closure}} at backtrace/examples/taskdump.rs:34:1
-//!      └╼ taskdump::fiz::{{closure}} at backtrace/examples/taskdump.rs:24:1
-//! ╼ taskdump::pending::{{closure}} at backtrace/examples/taskdump.rs:9:1
+//! ╼ taskdump::foo::{{closure}} at backtrace/examples/taskdump.rs:20:1
+//!   └╼ taskdump::bar::{{closure}} at backtrace/examples/taskdump.rs:25:1
+//!      ├╼ taskdump::buz::{{closure}} at backtrace/examples/taskdump.rs:35:1
+//!      │  └╼ taskdump::baz::{{closure}} at backtrace/examples/taskdump.rs:40:1
+//!      └╼ taskdump::fiz::{{closure}} at backtrace/examples/taskdump.rs:30:1
+//! ╼ taskdump::pending::{{closure}} at backtrace/examples/taskdump.rs:15:1
 //! ```
+//!
+//! ## Minimizing Overhead
+//! To minimize overhead, ensure that futures you spawn with your async runtime
+//! are marked with `#[framed]`.
+//!
+//! In other words, avoid doing this:
+//! ```rust
+//! # #[tokio::main] async fn main() {
+//! tokio::spawn(async_backtrace::location!().frame(async {
+//!     foo().await;
+//!     bar().await;
+//! })).await;
+//! # }
+//!
+//! #[async_backtrace::framed] async fn foo() {}
+//! #[async_backtrace::framed] async fn bar() {}
+//! ```
+//! ...and prefer doing this:
+//! ```rust
+//! # #[tokio::main] async fn main() {
+//! tokio::spawn(async {
+//!     foo().await;
+//!     bar().await;
+//! }).await;
+//! # }
+//!
+//! #[async_backtrace::framed]
+//! async fn foo() {
+//!     bar().await;
+//!     baz().await;
+//! }
+//!
+//! #[async_backtrace::framed] async fn bar() {}
+//! #[async_backtrace::framed] async fn baz() {}
+//! ```
+//!
+//! ## Estimating Overhead
+//! To estimate the overhead of adopting `#[framed]` in your application, refer
+//! to the benchmarks and interpretive guidance in
+//! `./backtrace/benches/frame_overhead.rs`. You can run these benchmarks with
+//! `cargo bench`.
 
 pub(crate) mod frame;
 pub(crate) mod framed;
@@ -80,13 +124,44 @@ pub(crate) use tasks::tasks;
 /// # async fn bar() {}
 /// # async fn baz() {}
 /// async fn foo() {
-///     async_backtrace::location!().frame(async move {
+///     async_backtrace::frame!(async move {
 ///         bar().await;
 ///         baz().await;
-///     }).await
+///     }).await;
 /// }
 /// ```
 pub use async_backtrace_macros::framed;
+
+/// Include the annotated async expression in backtraces and taskdumps.
+///
+/// This, for instance:
+/// ```
+/// # #[tokio::main] async fn main() {
+/// # async fn foo() {}
+/// # async fn bar() {}
+/// tokio::spawn(async_backtrace::frame!(async {
+///     foo().await;
+///     bar().await;
+/// })).await;
+/// # }
+/// ```
+/// ...expands, roughly, to:
+/// ```
+/// # #[tokio::main] async fn main() {
+/// # async fn foo() {}
+/// # async fn bar() {}
+/// tokio::spawn(async_backtrace::location!().frame(async {
+///     foo().await;
+///     bar().await;
+/// })).await;
+/// # }
+/// ```
+#[macro_export]
+macro_rules! frame {
+    ($async_expr:expr) => {
+        $crate::location!().frame($async_expr)
+    };
+}
 
 /// Produces a human-readable tree of task states.
 ///
