@@ -136,7 +136,7 @@ jobs:
         key: "${{ env.CRATE_TOOLCHAIN }}-${{ matrix.target }}-${{ env.FEATURES_HASH }}-${{ hashFiles('**/Cargo.lock') }}"
 
     - name: Check
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} check --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --verbose
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} check --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --verbose --all-targets
 
     - name: Build
       run: cargo +${{ env.CRATE_TOOLCHAIN }} build --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --verbose
