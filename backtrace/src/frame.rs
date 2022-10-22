@@ -8,45 +8,45 @@ use crate::{
 };
 
 pin_project_lite::pin_project! {
-    /// A [`Location`] in an intrusive, doubly-linked tree of [`Location`]s.
-    pub struct Frame {
-        // The location associated with this frame.
-        location: Location,
+/// A [`Location`] in an intrusive, doubly-linked tree of [`Location`]s.
+pub struct Frame {
+    // The location associated with this frame.
+    location: Location,
 
-        // The kind of this frame — either a root or a node.
-        kind: Kind,
+    // The kind of this frame — either a root or a node.
+    kind: Kind,
 
-        // The children of this frame.
-        children: UnsafeCell<Children>,
+    // The children of this frame.
+    children: UnsafeCell<Children>,
 
-        // The siblings of this frame.
-        #[pin]
-        siblings: Siblings,
+    // The siblings of this frame.
+    #[pin]
+    siblings: Siblings,
 
-        // Since `Frame` is part of an intrusive linked list, it must remain pinned.
-        _pinned: PhantomPinned,
-    }
+    // Since `Frame` is part of an intrusive linked list, it must remain pinned.
+    _pinned: PhantomPinned,
+}
 
-    impl PinnedDrop for Frame {
-        fn drop(this: Pin<&mut Self>) {
-            // If this frame has not yet been initialized, there's no need to do anything special upon drop.
-            if this.is_uninitialized() {
-                return;
+impl PinnedDrop for Frame {
+    fn drop(this: Pin<&mut Self>) {
+        // If this frame has not yet been initialized, there's no need to do anything special upon drop.
+        if this.is_uninitialized() {
+            return;
+        }
+
+        let this = this.into_ref().get_ref();
+
+        if let Some(parent) = this.parent() {
+            // remove this frame as a child of its parent
+            unsafe {
+                parent.children.with_mut(|children| (*children).remove(this.into()));
             }
-
-            let this = this.into_ref().get_ref();
-
-            if let Some(parent) = this.parent() {
-                // remove this frame as a child of its parent
-                unsafe {
-                    parent.children.with_mut(|children| (*children).remove(this.into()));
-                }
-            } else {
-                // this is a task; deregister it
-                crate::tasks::deregister(this);
-            }
+        } else {
+            // this is a task; deregister it
+            crate::tasks::deregister(this);
         }
     }
+}
 }
 
 // It is safe to transfer a `Frame` across thread boundaries, as it does not

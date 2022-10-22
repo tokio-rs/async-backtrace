@@ -44,6 +44,8 @@ where
     #[track_caller]
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<<Self as Future>::Output> {
         let this = self.project();
-        this.frame.in_scope(|| this.future.poll(cx))
+        let frame = this.frame;
+        let future = this.future;
+        frame.in_scope(|| future.poll(cx))
     }
 }

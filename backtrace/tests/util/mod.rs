@@ -2,8 +2,6 @@
 
 use std::{future::Future, sync::Mutex, task::Poll};
 
-static STDOUT: Mutex<String> = Mutex::new(String::new());
-
 pub(crate) fn model<F>(f: F)
 where
     F: Fn() + Sync + Send + 'static,
@@ -20,71 +18,6 @@ pub(crate) mod thread {
 
     #[cfg(loom)]
     pub(crate) use loom::thread::{spawn, yield_now};
-}
-
-#[macro_export]
-macro_rules! ui_test {
-    () => {
-        $crate::test::UITest {
-            #[cfg(bless)]
-            expected_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../", file!(), ".stdout"),
-            #[cfg(not(bless))]
-            expected_output: include_str!(concat!("../../", file!(), ".stdout")),
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! io {
-    () => {
-        static STDOUT: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
-
-        pub fn stdout() -> String {
-            STDOUT.lock().unwrap().clone()
-        }
-
-        pub fn println(s: impl ToString) {
-            let mut stdout = STDOUT.lock().unwrap();
-            *stdout += &s.to_string();
-            *stdout += "\n";
-        }
-    };
-}
-
-pub struct UITest {
-    #[cfg(bless)]
-    pub(crate) expected_path: &'static str,
-    #[cfg(not(bless))]
-    pub(crate) expected_output: &'static str,
-}
-
-pub struct DropGuard<'a> {
-    test: &'a UITest,
-}
-
-impl<'a> Drop for DropGuard<'a> {
-    fn drop(&mut self) {
-        let actual = &*STDOUT.lock().unwrap();
-        #[cfg(bless)]
-        {
-            std::fs::write(self.test.expected_path, actual).unwrap();
-        }
-        #[cfg(not(bless))]
-        {
-            let expected = self.test.expected_output;
-            pretty_assertions::assert_str_eq!(expected, actual);
-        }
-    }
-}
-
-pub fn actual() -> String {
-    STDOUT.lock().unwrap().clone()
-}
-
-pub fn println(s: impl ToString) {
-    let mut stdout = STDOUT.lock().unwrap();
-    *stdout += &s.to_string();
-    *stdout += "\n";
 }
 
 pub fn run<F: Future>(f: F) -> <F as Future>::Output {

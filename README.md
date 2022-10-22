@@ -1,13 +1,18 @@
+<!-- Do not edit README.md manually. Instead, edit the module comment of `backtrace/lib.rs`. -->
+
+# async-backtrace
+
 Efficient, logical 'stack' traces of async functions.
 
 ## Usage
-To use, annotate your async functions with `#[async_backtrace::framed]`, like so:
+To use, annotate your async functions with `#[async_backtrace::framed]`,
+like so:
 
 ```rust
 #[tokio::main]
 async fn main() {
     tokio::select! {
-        _ = tokio::spawn(pending()) => {}
+        _ = tokio::spawn(async_backtrace::frame!(pending())) => {}
         _ = foo() => {}
     };
 }
@@ -45,7 +50,7 @@ async fn baz() -> String {
 
 This example program will print out something along the lines of:
 
-```text
+```
 ╼ taskdump::foo::{{closure}} at backtrace/examples/taskdump.rs:20:1
   └╼ taskdump::bar::{{closure}} at backtrace/examples/taskdump.rs:25:1
      ├╼ taskdump::buz::{{closure}} at backtrace/examples/taskdump.rs:35:1
@@ -55,33 +60,42 @@ This example program will print out something along the lines of:
 ```
 
 ## Minimizing Overhead
-To minimize overhead, ensure that futures you spawn with your async runtime are marked with `#[framed]`.
+To minimize overhead, ensure that futures you spawn with your async runtime
+are marked with `#[framed]`.
 
 In other words, avoid doing this:
 ```rust
-tokio::spawn(foo()).await;
-
-async fn foo() {
+tokio::spawn(async_backtrace::location!().frame(async {
+    foo().await;
     bar().await;
-    baz().await;
-}
+})).await;
 
-#[framed] async fn bar() {}
-#[framed] async fn baz() {}
+#[async_backtrace::framed] async fn foo() {}
+#[async_backtrace::framed] async fn bar() {}
 ```
 ...and prefer doing this:
 ```rust
-tokio::spawn(foo()).await;
+tokio::spawn(async {
+    foo().await;
+    bar().await;
+}).await;
 
-#[framed]
+#[async_backtrace::framed]
 async fn foo() {
     bar().await;
     baz().await;
 }
 
-#[framed] async fn bar() {}
-#[framed] async fn baz() {}
+#[async_backtrace::framed] async fn bar() {}
+#[async_backtrace::framed] async fn baz() {}
 ```
 
 ## Estimating Overhead
-To estimate the overhead of adopting `#[framed]` in your application, refer to the benchmarks and interpretive guidance in `./backtrace/benches/frame_overhead.rs`. You can run these benchmarks with `cargo bench`. 
+To estimate the overhead of adopting `#[framed]` in your application, refer
+to the benchmarks and interpretive guidance in
+`./backtrace/benches/frame_overhead.rs`. You can run these benchmarks with
+`cargo bench`.
+
+## License
+
+MIT
