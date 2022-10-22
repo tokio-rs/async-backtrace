@@ -216,19 +216,17 @@ jobs:
 
   check_readme:
     runs-on: ubuntu-latest
-    name: Check MSRVs match
+    name: Check README is correctly generated.
     steps:
       - uses: actions/checkout@v3
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.0.0
       - uses: extractions/setup-just@v1
-      # Make sure that the MSRV in async-backtrace's and async-backtrace-macros's
-      # `Cargo.toml` files are the same.
       - name: Check MSRVs match
         run: |
           set -e
           cargo install cargo-readme --version 3.2.0
-          diff <(./generate-readme.sh) README.md
+          diff <(just generate-readme) README.md
           exit $?
 
   ci-success:
