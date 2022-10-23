@@ -43,7 +43,7 @@ env:
   # `CRATE_NIGHTLY_XXX` are flags that we add to `XXX` only on the nightly
   # toolchain.
   CRATE_NIGHTLY_RUSTFLAGS: -Zrandomize-layout
-  CRATE_NIGHTLY_MIRIFLAGS: "-Zmiri-symbolic-alignment-check"
+  CRATE_NIGHTLY_MIRIFLAGS: "-Zmiri-disable-isolation -Zmiri-symbolic-alignment-check"
 
 jobs:
   build_test:
