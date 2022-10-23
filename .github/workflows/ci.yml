@@ -43,7 +43,7 @@ env:
   # `CRATE_NIGHTLY_XXX` are flags that we add to `XXX` only on the nightly
   # toolchain.
   CRATE_NIGHTLY_RUSTFLAGS: -Zrandomize-layout
-  CRATE_NIGHTLY_MIRIFLAGS: "-Zmiri-symbolic-alignment-check -Zmiri-strict-provenance"
+  CRATE_NIGHTLY_MIRIFLAGS: "-Zmiri-disable-isolation -Zmiri-symbolic-alignment-check"
 
 jobs:
   build_test:
@@ -53,10 +53,8 @@ jobs:
       matrix:
         toolchain: [ "msrv", "stable", "nightly" ]
         target: [ "i686-unknown-linux-gnu", "x86_64-unknown-linux-gnu" ]
-        features: [ "" ]
-        manifest-path: [ "backtrace/Cargo.toml", "macros/Cargo.toml" ]
 
-    name: Build & Test (manifest-path:${{ matrix.manifest-path }}, toolchain:${{ matrix.toolchain }}, target:${{ matrix.target }}, features:${{ matrix.features }})
+    name: Build & Test (toolchain:${{ matrix.toolchain }}, target:${{ matrix.target }})
 
     steps:
     - uses: actions/checkout@v3
@@ -124,22 +122,8 @@ jobs:
           # https://github.com/actions/runner/issues/409#issuecomment-752775072
           components: clippy ${{ matrix.toolchain == 'nightly' && ', miri' || '' }}
 
-    # The features string contains commas which cannot be part of the cache
-    # key for the Rust Cache action. Instead, we hash the features
-    # to get a string of legal characters.
-    - name: Set feature string for cache key
-      run: |
-        echo "FEATURES_HASH=$(echo ${{ matrix.features }} | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_ENV
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2.0.0
-      with:
-        key: "${{ env.CRATE_TOOLCHAIN }}-${{ matrix.target }}-${{ env.FEATURES_HASH }}-${{ hashFiles('**/Cargo.lock') }}"
-
-    - name: Check
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} check --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --verbose
-
-    - name: Build
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} build --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --verbose
 
     # When building tests for the i686 target, we need certain libraries which
     # are not installed by default; `gcc-multilib` includes these libraries.
@@ -147,29 +131,32 @@ jobs:
       run: sudo apt-get install gcc-multilib
       if: ${{ contains(matrix.target, 'i686') }}
 
-    - name: Run tests
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --verbose
+    - name: Check
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} check --target ${{ matrix.target }} --all-targets --verbose
+
+    - name: Test
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose
       # Only run tests when targetting x86 (32- or 64-bit) - we're executing on
       # x86_64, so we can't run tests for any non-x86 target.
       if: ${{ contains(matrix.target, 'x86_64') || contains(matrix.target, 'i686') }}
 
-    - name: Run tests under Loom
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --verbose
+    - name: Test (loom)
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose --release --tests
       # Only run tests when targetting x86 (32- or 64-bit) - we're executing on
       # x86_64, so we can't run tests for any non-x86 target.
-      if: ${{ contains(matrix.target, 'x86_64') || contains(matrix.target, 'i686') }}
+      if: ${{ contains(matrix.target, 'x86_64') || contains(matrix.target, 'aarch64') }}
       env:
         RUSTFLAGS: --cfg loom ${{ env.RUSTFLAGS }}
 
-    - name: Run tests under Miri
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} miri test --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --
+    - name: Test (miri)
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} miri test --target ${{ matrix.target }}
       # Only nightly has a working Miri, so we skip installing on all other
       # toolchains.
       if: ${{ matrix.toolchain == 'nightly' }}
 
   check_fmt:
     runs-on: ubuntu-latest
-    name: Check Rust formatting
+    name: cargo fmt
     steps:
       - uses: actions/checkout@v3
       - name: Install Rust (nightly)
@@ -185,7 +172,7 @@ jobs:
 
   check_clippy:
     runs-on: ubuntu-latest
-    name: Check Rust formatting
+    name: cargo clippy
     steps:
       - uses: actions/checkout@v3
       - name: Install Rust (nightly)
@@ -216,19 +203,17 @@ jobs:
 
   check_readme:
     runs-on: ubuntu-latest
-    name: Check MSRVs match
+    name: Check README is correctly generated.
     steps:
       - uses: actions/checkout@v3
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.0.0
       - uses: extractions/setup-just@v1
-      # Make sure that the MSRV in async-backtrace's and async-backtrace-macros's
-      # `Cargo.toml` files are the same.
       - name: Check MSRVs match
         run: |
           set -e
           cargo install cargo-readme --version 3.2.0
-          diff <(./generate-readme.sh) README.md
+          diff <(just generate-readme) README.md
           exit $?
 
   ci-success:

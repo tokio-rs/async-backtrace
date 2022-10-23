@@ -12,7 +12,7 @@ readme:
 generate-readme:
     cargo readme -r backtrace -t ../README.tpl --no-indent-headings
 
-check_msrv:
+check-msrv:
     #!/usr/bin/env bash
     set -e
 
