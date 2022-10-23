@@ -135,14 +135,14 @@ jobs:
       with:
         key: "${{ env.CRATE_TOOLCHAIN }}-${{ matrix.target }}-${{ env.FEATURES_HASH }}-${{ hashFiles('**/Cargo.lock') }}"
 
-    - name: Build
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} build --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --all-targets --verbose
-
     # When building tests for the i686 target, we need certain libraries which
     # are not installed by default; `gcc-multilib` includes these libraries.
     - name: Install gcc-multilib
       run: sudo apt-get install gcc-multilib
       if: ${{ contains(matrix.target, 'i686') }}
+
+    - name: Build
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} build --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --all-targets --verbose
 
     - name: Run tests
       run: cargo +${{ env.CRATE_TOOLCHAIN }} test --manifest-path ${{ matrix.manifest-path }} --target ${{ matrix.target }} --features "${{ matrix.features }}" --verbose
