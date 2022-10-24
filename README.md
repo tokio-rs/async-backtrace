@@ -44,7 +44,7 @@ async fn buz() {
 
 #[taskdump::framed]
 async fn baz() -> String {
-    taskdump::taskdump(true)
+    taskdump::taskdump_tree(true)
 }
 ```
 

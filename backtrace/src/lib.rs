@@ -40,7 +40,7 @@
 //!
 //! #[taskdump::framed]
 //! async fn baz() -> String {
-//!     taskdump::taskdump(true)
+//!     taskdump::taskdump_tree(true)
 //! }
 //! ```
 //!
@@ -169,7 +169,7 @@ macro_rules! frame {
 /// top-level location of currently-running tasks and a note that they are
 /// "POLLING". Otherwise, this routine will wait for currently-running tasks to
 /// become idle.
-pub fn taskdump(wait_for_running_tasks: bool) -> String {
+pub fn taskdump_tree(wait_for_running_tasks: bool) -> String {
     tasks()
         .map(|task| task.dump_tree(wait_for_running_tasks))
         .collect()

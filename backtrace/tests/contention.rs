@@ -11,7 +11,7 @@ use taskdump::framed;
 fn contention() {
     util::model(|| {
         let handle_a = util::thread::spawn(|| util::run(outer()));
-        let handle_b = util::thread::spawn(|| taskdump::taskdump(true));
+        let handle_b = util::thread::spawn(|| taskdump::taskdump_tree(true));
         handle_a.join().unwrap();
         handle_b.join().unwrap();
     });

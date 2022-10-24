@@ -10,7 +10,7 @@ fn reentrant() {
 
 #[framed]
 async fn outer() {
-    let dump = taskdump::taskdump(true);
+    let dump = taskdump::taskdump_tree(true);
     pretty_assertions::assert_str_eq!(
         util::strip(dump),
         "\
@@ -21,7 +21,7 @@ async fn outer() {
 
 #[framed]
 async fn inner() {
-    let dump = taskdump::taskdump(true);
+    let dump = taskdump::taskdump_tree(true);
     pretty_assertions::assert_str_eq!(
         util::strip(dump),
         "\
