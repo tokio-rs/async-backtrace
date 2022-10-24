@@ -2,7 +2,7 @@
 /// from insided a framed future that spawns a scoped thread that requests the
 /// task dump.
 mod util;
-use async_backtrace::framed;
+use taskdump::framed;
 
 #[framed]
 fn deadlockless() {
@@ -11,7 +11,7 @@ fn deadlockless() {
 
 #[framed]
 async fn outer() {
-    let dump = std::thread::spawn(|| async_backtrace::taskdump(true))
+    let dump = std::thread::spawn(|| taskdump::taskdump_tree(true))
         .join()
         .unwrap();
     pretty_assertions::assert_str_eq!(
@@ -25,7 +25,7 @@ async fn outer() {
 
 #[framed]
 async fn inner() {
-    let dump = util::thread::spawn(|| async_backtrace::taskdump(true))
+    let dump = util::thread::spawn(|| taskdump::taskdump_tree(true))
         .join()
         .unwrap();
     pretty_assertions::assert_str_eq!(
