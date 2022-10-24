@@ -5,7 +5,7 @@ use futures::Future;
 /// Produces a [`Location`] when invoked in a function body.
 ///
 /// ```
-/// use async_backtrace::{location, Location};
+/// use taskdump::{location, Location};
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -71,7 +71,7 @@ impl Location {
     /// # async fn bar() {}
     /// # async fn baz() {}
     /// async fn foo() {
-    ///     async_backtrace::location!().frame(async move {
+    ///     taskdump::location!().frame(async move {
     ///         bar().await;
     ///         baz().await;
     ///     }).await

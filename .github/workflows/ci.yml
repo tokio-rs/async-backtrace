@@ -26,7 +26,7 @@
 #   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# [0] https://github.com/google/async-backtrace/blob/main/.github/workflows/ci.yml
+# [0] https://github.com/google/taskdump/blob/main/.github/workflows/ci.yml
 
 name: CI
 
@@ -65,13 +65,13 @@ jobs:
     # sets the `CRATE_TOOLCHAIN` environment variable for future steps to use.
     #
     # Note that all metadata is stored in the `Cargo.toml` at
-    # the repository root. `async-backtrace-macros` is tested with the same versions,
+    # the repository root. `taskdump-attributes` is tested with the same versions,
     # and we have another CI job (see below) that makes sure that the
-    # `package.rust_version` key in async-backtrace-macros's `Cargo.toml` is the same
-    # as the one in async-backtrace's `Cargo.toml`. This key indicates the crate's
+    # `package.rust_version` key in taskdump-attributes's `Cargo.toml` is the same
+    # as the one in taskdump's `Cargo.toml`. This key indicates the crate's
     # MSRV, and if this check weren't present, it would be possible for
-    # async-backtrace-macros to be published with an earlier MSRV than the one we test
-    # for in CI - and thus potentially an MSRV that async-backtrace-macros isn't
+    # taskdump-attributes to be published with an earlier MSRV than the one we test
+    # for in CI - and thus potentially an MSRV that taskdump-attributes isn't
     # actually compatible with.
     - name: Set toolchain version
       run: |
@@ -82,7 +82,7 @@ jobs:
         }
         case ${{ matrix.toolchain }} in
           msrv)
-            CRATE_TOOLCHAIN="$(msrv async-backtrace)"
+            CRATE_TOOLCHAIN="$(msrv taskdump)"
             ;;
           stable)
             CRATE_TOOLCHAIN="stable"
@@ -196,7 +196,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.0.0
       - uses: extractions/setup-just@v1
-      # Make sure that the MSRV in async-backtrace's and async-backtrace-macros's
+      # Make sure that the MSRV in taskdump's and taskdump-attributes's
       # `Cargo.toml` files are the same.
       - name: Check MSRVs match
         run: just check-msrv

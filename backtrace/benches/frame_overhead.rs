@@ -74,7 +74,7 @@ fn bench_root_poll_first<M: Measurement<Value = Duration>>(c: &mut BenchmarkGrou
             }
             bench {
                 // initialize a `Frame`
-                let frame = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
+                let frame = taskdump::ඞ::Frame::new(taskdump::location!());
                 tokio::pin!(frame);
                 // invoke `Frame::in_scope` once
                 let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
@@ -109,7 +109,7 @@ fn bench_root_poll_rest<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup
             b;
             setup {
                 // initialize a `Frame`
-                let frame = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
+                let frame = taskdump::ඞ::Frame::new(taskdump::location!());
                 tokio::pin!(frame);
                 // invoke `Frame::in_scope` once
                 let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
@@ -135,13 +135,13 @@ fn bench_root_poll_rest<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup
 /// locking.
 fn bench_subframe_poll_first<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup<'_, M>) {
     c.bench_function("Frame::in_scope (subframe, first)", move |b| {
-        let root = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
+        let root = taskdump::ඞ::Frame::new(taskdump::location!());
         tokio::pin!(root);
         root.in_scope(|| {
             // within the scope of a root `Frame`, benchmark:
             b.iter(|| {
                 // ...initializing a sub-`Frame`,
-                let frame = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
+                let frame = taskdump::ඞ::Frame::new(taskdump::location!());
                 tokio::pin!(frame);
                 // ...and invoking `Frame::in_scope` once on it.
                 let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
@@ -158,11 +158,11 @@ fn bench_subframe_poll_first<M: Measurement<Value = Duration>>(c: &mut Benchmark
 /// sub-`#[framed]` functions. It should be virtually free.
 fn bench_subframe_poll_rest<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup<'_, M>) {
     c.bench_function("Frame::in_scope (subframe, rest)", move |b| {
-        let root = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
+        let root = taskdump::ඞ::Frame::new(taskdump::location!());
         tokio::pin!(root);
         root.in_scope(|| {
             // within the scope of a root `Frame`, initialize a subframe,
-            let frame = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
+            let frame = taskdump::ඞ::Frame::new(taskdump::location!());
             tokio::pin!(frame);
             // invoke `Frame::in_scope` on it
             let _ = black_box(frame.as_mut().in_scope(|| black_box(())));

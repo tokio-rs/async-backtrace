@@ -1,7 +1,7 @@
 /// A test that a blocking threaddump does not deadlock a program when requested
 /// from within a `framed` task.
 mod util;
-use async_backtrace::framed;
+use taskdump::framed;
 
 #[test]
 fn reentrant() {
@@ -10,7 +10,7 @@ fn reentrant() {
 
 #[framed]
 async fn outer() {
-    let dump = async_backtrace::taskdump(true);
+    let dump = taskdump::taskdump(true);
     pretty_assertions::assert_str_eq!(
         util::strip(dump),
         "\
@@ -21,7 +21,7 @@ async fn outer() {
 
 #[framed]
 async fn inner() {
-    let dump = async_backtrace::taskdump(true);
+    let dump = taskdump::taskdump(true);
     pretty_assertions::assert_str_eq!(
         util::strip(dump),
         "\
