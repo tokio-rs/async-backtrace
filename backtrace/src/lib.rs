@@ -62,10 +62,10 @@
 //! In other words, avoid doing this:
 //! ```rust
 //! # #[tokio::main] async fn main() {
-//! tokio::spawn(async_backtrace::location!().frame(async {
+//! tokio::spawn(async {
 //!     foo().await;
 //!     bar().await;
-//! })).await;
+//! }).await;
 //! # }
 //!
 //! #[async_backtrace::framed] async fn foo() {}
@@ -74,20 +74,14 @@
 //! ...and prefer doing this:
 //! ```rust
 //! # #[tokio::main] async fn main() {
-//! tokio::spawn(async {
+//! tokio::spawn(async_backtrace::location!().frame(async {
 //!     foo().await;
 //!     bar().await;
-//! }).await;
+//! })).await;
 //! # }
 //!
-//! #[async_backtrace::framed]
-//! async fn foo() {
-//!     bar().await;
-//!     baz().await;
-//! }
-//!
+//! #[async_backtrace::framed] async fn foo() {}
 //! #[async_backtrace::framed] async fn bar() {}
-//! #[async_backtrace::framed] async fn baz() {}
 //! ```
 //!
 //! ## Estimating Overhead
