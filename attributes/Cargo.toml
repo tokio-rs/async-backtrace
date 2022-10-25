@@ -4,6 +4,7 @@ version = "0.2.0"
 edition = "2018"
 license = "MIT"
 rust-version = "1.59"
+description = "Procedural macros for the `async-backtrace` crate."
 repository = "https://github.com/tokio-rs/async-backtrace"
 
 [lib]
