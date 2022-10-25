@@ -178,7 +178,7 @@ jobs:
       - name: Install Rust (nightly)
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: nightly-2022-10-24
           override: true
           components: clippy
       - name: Rust Cache
