@@ -1,46 +1,46 @@
 //! Efficient, logical 'stack' traces of async functions.
 //!
 //! ## Usage
-//! To use, annotate your async functions with `#[taskdump::framed]`,
+//! To use, annotate your async functions with `#[async_backtrace::framed]`,
 //! like so:
 //!
 //! ```rust
 //! #[tokio::main]
 //! async fn main() {
 //!     tokio::select! {
-//!         _ = tokio::spawn(taskdump::frame!(pending())) => {}
+//!         _ = tokio::spawn(async_backtrace::frame!(pending())) => {}
 //!         _ = foo() => {}
 //!     };
 //! }
 //!
-//! #[taskdump::framed]
+//! #[async_backtrace::framed]
 //! async fn pending() {
 //!     std::future::pending::<()>().await
 //! }
 //!
-//! #[taskdump::framed]
+//! #[async_backtrace::framed]
 //! async fn foo() {
 //!     bar().await;
 //! }
 //!
-//! #[taskdump::framed]
+//! #[async_backtrace::framed]
 //! async fn bar() {
 //!     futures::join!(fiz(), buz());
 //! }
 //!
-//! #[taskdump::framed]
+//! #[async_backtrace::framed]
 //! async fn fiz() {
 //!     tokio::task::yield_now().await;
 //! }
 //!
-//! #[taskdump::framed]
+//! #[async_backtrace::framed]
 //! async fn buz() {
 //!     println!("{}", baz().await);
 //! }
 //!
-//! #[taskdump::framed]
+//! #[async_backtrace::framed]
 //! async fn baz() -> String {
-//!     taskdump::taskdump_tree(true)
+//!     async_backtrace::taskdump_tree(true)
 //! }
 //! ```
 //!
@@ -62,32 +62,26 @@
 //! In other words, avoid doing this:
 //! ```rust
 //! # #[tokio::main] async fn main() {
-//! tokio::spawn(taskdump::location!().frame(async {
-//!     foo().await;
-//!     bar().await;
-//! })).await;
-//! # }
-//!
-//! #[taskdump::framed] async fn foo() {}
-//! #[taskdump::framed] async fn bar() {}
-//! ```
-//! ...and prefer doing this:
-//! ```rust
-//! # #[tokio::main] async fn main() {
 //! tokio::spawn(async {
 //!     foo().await;
 //!     bar().await;
 //! }).await;
 //! # }
 //!
-//! #[taskdump::framed]
-//! async fn foo() {
+//! #[async_backtrace::framed] async fn foo() {}
+//! #[async_backtrace::framed] async fn bar() {}
+//! ```
+//! ...and prefer doing this:
+//! ```rust
+//! # #[tokio::main] async fn main() {
+//! tokio::spawn(async_backtrace::location!().frame(async {
+//!     foo().await;
 //!     bar().await;
-//!     baz().await;
-//! }
+//! })).await;
+//! # }
 //!
-//! #[taskdump::framed] async fn bar() {}
-//! #[taskdump::framed] async fn baz() {}
+//! #[async_backtrace::framed] async fn foo() {}
+//! #[async_backtrace::framed] async fn bar() {}
 //! ```
 //!
 //! ## Estimating Overhead
@@ -113,7 +107,7 @@ pub(crate) use tasks::tasks;
 /// ```
 /// # async fn bar() {}
 /// # async fn baz() {}
-/// #[taskdump::framed]
+/// #[async_backtrace::framed]
 /// async fn foo() {
 ///     bar().await;
 ///     baz().await;
@@ -124,13 +118,13 @@ pub(crate) use tasks::tasks;
 /// # async fn bar() {}
 /// # async fn baz() {}
 /// async fn foo() {
-///     taskdump::frame!(async move {
+///     async_backtrace::frame!(async move {
 ///         bar().await;
 ///         baz().await;
 ///     }).await;
 /// }
 /// ```
-pub use taskdump_attributes::framed;
+pub use async_backtrace_attributes::framed;
 
 /// Include the annotated async expression in backtraces and taskdumps.
 ///
@@ -139,7 +133,7 @@ pub use taskdump_attributes::framed;
 /// # #[tokio::main] async fn main() {
 /// # async fn foo() {}
 /// # async fn bar() {}
-/// tokio::spawn(taskdump::frame!(async {
+/// tokio::spawn(async_backtrace::frame!(async {
 ///     foo().await;
 ///     bar().await;
 /// })).await;
@@ -150,7 +144,7 @@ pub use taskdump_attributes::framed;
 /// # #[tokio::main] async fn main() {
 /// # async fn foo() {}
 /// # async fn bar() {}
-/// tokio::spawn(taskdump::location!().frame(async {
+/// tokio::spawn(async_backtrace::location!().frame(async {
 ///     foo().await;
 ///     bar().await;
 /// })).await;
@@ -179,26 +173,26 @@ pub fn taskdump_tree(wait_for_running_tasks: bool) -> String {
 ///
 /// ## Example
 /// ```
-/// use taskdump::{framed, backtrace, Location};
+/// use async_backtrace::{framed, backtrace, Location};
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     foo().await;
 /// }
 ///
-/// #[taskdump::framed]
+/// #[async_backtrace::framed]
 /// async fn foo() {
 ///     bar().await;
 /// }
 ///
-/// #[taskdump::framed]
+/// #[async_backtrace::framed]
 /// async fn bar() {
 ///     baz().await;
 /// }
 ///
-/// #[taskdump::framed]
+/// #[async_backtrace::framed]
 /// async fn baz() {
-///     assert_eq!(&taskdump::backtrace().unwrap().iter().map(|l| l.to_string()).collect::<Vec<_>>()[..], &[
+///     assert_eq!(&async_backtrace::backtrace().unwrap().iter().map(|l| l.to_string()).collect::<Vec<_>>()[..], &[
 ///         "rust_out::baz::{{closure}} at src/lib.rs:20:1",
 ///         "rust_out::bar::{{closure}} at src/lib.rs:15:1",
 ///         "rust_out::foo::{{closure}} at src/lib.rs:10:1",

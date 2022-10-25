@@ -21,14 +21,14 @@ check-msrv:
         cargo metadata --format-version 1 | jq -r ".packages[] | select(.name == \"$1\").rust_version"
     }
 
-    ver_taskdump=$(msrv taskdump)
-    ver_taskdump_attributes=$(msrv taskdump-attributes)
+    ver_async_backtrace=$(msrv async-backtrace)
+    ver_async_backtrace_macros=$(msrv async-backtrace-attributes)
 
-    if [[ "$ver_taskdump" == "$ver_taskdump_attributes" ]]; then
-        echo "Same MSRV ($ver_taskdump) found in 'taskdump' and 'taskdump-attributes'." | tee -a $GITHUB_STEP_SUMMARY
+    if [[ "$ver_async_backtrace" == "$ver_async_backtrace_macros" ]]; then
+        echo "Same MSRV ($ver_async_backtrace) found in 'async-backtrace' and 'async-backtrace-attributes'." | tee -a $GITHUB_STEP_SUMMARY
         exit 0
     else
-        echo "Different MSRVs found in 'taskdump' ($ver_taskdump) and '$taskdump-attributes' ($ver_taskdump_attributes)." \
+        echo "Different MSRVs found in 'async-backtrace' ($ver_async_backtrace) and 'async-backtrace-attributes' ($ver_async_backtrace_macros)." \
             | tee -a $GITHUB_STEP_SUMMARY >&2
         exit 1
     fi
