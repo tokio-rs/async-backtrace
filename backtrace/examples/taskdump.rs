@@ -14,32 +14,32 @@ async fn main() {
     };
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn pending() {
     std::future::pending::<()>().await
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn foo() {
     bar().await;
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn bar() {
     futures::join!(fiz(), buz());
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn fiz() {
     tokio::task::yield_now().await;
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn buz() {
     println!("{}", baz().await);
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn baz() -> String {
-    taskdump::taskdump_tree(true)
+    async_backtrace::taskdump_tree(true)
 }

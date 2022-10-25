@@ -1,50 +1,54 @@
 <!-- Do not edit README.md manually. Instead, edit the module comment of `backtrace/lib.rs`. -->
 
-# taskdump
+# async-backtrace
 
 Efficient, logical 'stack' traces of async functions.
 
 ## Usage
-To use, annotate your async functions with `#[taskdump::framed]`,
+To use, annotate your async functions with `#[async_backtrace::framed]`,
 like so:
 
 ```rust
 #[tokio::main]
 async fn main() {
     tokio::select! {
-        _ = tokio::spawn(taskdump::frame!(pending())) => {}
+        _ = tokio::spawn(async_backtrace::frame!(pending())) => {}
         _ = foo() => {}
     };
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn pending() {
     std::future::pending::<()>().await
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn foo() {
     bar().await;
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn bar() {
     futures::join!(fiz(), buz());
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn fiz() {
     tokio::task::yield_now().await;
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn buz() {
     println!("{}", baz().await);
 }
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn baz() -> String {
+<<<<<<< HEAD
     taskdump::taskdump_tree(true)
+=======
+    async_backtrace::taskdump(true)
+>>>>>>> parent of 7da3958 (rename crates)
 }
 ```
 
@@ -65,13 +69,13 @@ are marked with `#[framed]`.
 
 In other words, avoid doing this:
 ```rust
-tokio::spawn(taskdump::location!().frame(async {
+tokio::spawn(async_backtrace::location!().frame(async {
     foo().await;
     bar().await;
 })).await;
 
-#[taskdump::framed] async fn foo() {}
-#[taskdump::framed] async fn bar() {}
+#[async_backtrace::framed] async fn foo() {}
+#[async_backtrace::framed] async fn bar() {}
 ```
 ...and prefer doing this:
 ```rust
@@ -80,14 +84,14 @@ tokio::spawn(async {
     bar().await;
 }).await;
 
-#[taskdump::framed]
+#[async_backtrace::framed]
 async fn foo() {
     bar().await;
     baz().await;
 }
 
-#[taskdump::framed] async fn bar() {}
-#[taskdump::framed] async fn baz() {}
+#[async_backtrace::framed] async fn bar() {}
+#[async_backtrace::framed] async fn baz() {}
 ```
 
 ## Estimating Overhead
