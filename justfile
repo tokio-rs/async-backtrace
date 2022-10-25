@@ -22,13 +22,13 @@ check-msrv:
     }
 
     ver_async_backtrace=$(msrv async-backtrace)
-    ver_async_backtrace_macros=$(msrv async-backtrace-macros)
+    ver_async_backtrace_macros=$(msrv async-backtrace-attributes)
 
     if [[ "$ver_async_backtrace" == "$ver_async_backtrace_macros" ]]; then
-        echo "Same MSRV ($ver_async_backtrace) found in 'async-backtrace' and 'async-backtrace-macros'." | tee -a $GITHUB_STEP_SUMMARY
+        echo "Same MSRV ($ver_async_backtrace) found in 'async-backtrace' and 'async-backtrace-attributes'." | tee -a $GITHUB_STEP_SUMMARY
         exit 0
     else
-        echo "Different MSRVs found in 'async-backtrace' ($ver_async_backtrace) and '$async-backtrace-macros' ($ver_async_backtrace_macros)." \
+        echo "Different MSRVs found in 'async-backtrace' ($ver_async_backtrace) and 'async-backtrace-attributes' ($ver_async_backtrace_macros)." \
             | tee -a $GITHUB_STEP_SUMMARY >&2
         exit 1
     fi

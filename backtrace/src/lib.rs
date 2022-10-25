@@ -124,7 +124,7 @@ pub(crate) use tasks::tasks;
 ///     }).await;
 /// }
 /// ```
-pub use async_backtrace_macros::framed;
+pub use async_backtrace_attributes::framed;
 
 /// Include the annotated async expression in backtraces and taskdumps.
 ///
