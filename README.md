@@ -44,11 +44,7 @@ async fn buz() {
 
 #[async_backtrace::framed]
 async fn baz() -> String {
-<<<<<<< HEAD
-    taskdump::taskdump_tree(true)
-=======
-    async_backtrace::taskdump(true)
->>>>>>> parent of 7da3958 (rename crates)
+    async_backtrace::taskdump_tree(true)
 }
 ```
 
@@ -69,6 +65,16 @@ are marked with `#[framed]`.
 
 In other words, avoid doing this:
 ```rust
+tokio::spawn(async {
+    foo().await;
+    bar().await;
+}).await;
+
+#[async_backtrace::framed] async fn foo() {}
+#[async_backtrace::framed] async fn bar() {}
+```
+...and prefer doing this:
+```rust
 tokio::spawn(async_backtrace::location!().frame(async {
     foo().await;
     bar().await;
@@ -76,22 +82,6 @@ tokio::spawn(async_backtrace::location!().frame(async {
 
 #[async_backtrace::framed] async fn foo() {}
 #[async_backtrace::framed] async fn bar() {}
-```
-...and prefer doing this:
-```rust
-tokio::spawn(async {
-    foo().await;
-    bar().await;
-}).await;
-
-#[async_backtrace::framed]
-async fn foo() {
-    bar().await;
-    baz().await;
-}
-
-#[async_backtrace::framed] async fn bar() {}
-#[async_backtrace::framed] async fn baz() {}
 ```
 
 ## Estimating Overhead
@@ -102,4 +92,12 @@ to the benchmarks and interpretive guidance in
 
 ## License
 
-MIT
+This project is licensed under the [MIT license].
+
+[MIT license]: https://github.com/tokio-rs/async-backtrace/blob/main/LICENSE
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in async-backtrace by you, shall be licensed as MIT, without any
+additional terms or conditions.
