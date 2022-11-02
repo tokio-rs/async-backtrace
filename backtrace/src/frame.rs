@@ -296,7 +296,7 @@ impl Frame {
             }
 
             // print all but the first three codepoints of current
-            writeln!(&mut f, "{}", {
+            write!(&mut f, "{}", {
                 let mut current = current.chars();
                 current.next().unwrap();
                 current.next().unwrap();
@@ -306,6 +306,7 @@ impl Frame {
 
             if subframes_locked {
                 frame.subframes().for_each(|frame| {
+                    writeln!(&mut f).unwrap();
                     let is_last = frame.next_frame().is_none();
                     fmt_helper(f, frame, is_last, &next, true).unwrap();
                 });

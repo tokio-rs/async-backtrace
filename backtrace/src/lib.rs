@@ -164,9 +164,10 @@ macro_rules! frame {
 /// "POLLING". Otherwise, this routine will wait for currently-running tasks to
 /// become idle.
 pub fn taskdump_tree(wait_for_running_tasks: bool) -> String {
-    tasks()
-        .map(|task| task.dump_tree(wait_for_running_tasks))
-        .collect()
+    itertools::join(
+        tasks().map(|task| task.dump_tree(wait_for_running_tasks)),
+        "\n",
+    )
 }
 
 /// Produces a backtrace starting at the currently-active frame (if any).

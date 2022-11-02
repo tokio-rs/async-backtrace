@@ -35,7 +35,7 @@ pub fn run<F: Future>(f: F) -> <F as Future>::Output {
 
 pub fn strip(str: impl AsRef<str>) -> String {
     let re = regex::Regex::new(r":\d+:\d+").unwrap();
-    re.replace_all(str.as_ref().trim(), ":LINE:COL").to_string()
+    re.replace_all(str.as_ref(), ":LINE:COL").to_string()
 }
 
 pub fn defer<F: FnOnce() -> R, R>(f: F) -> impl Drop {
