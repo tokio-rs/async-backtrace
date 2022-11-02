@@ -1,9 +1,11 @@
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
-### Added
+### Fixed
+- eliminated redundant newline at end of `taskdump_tree` output (#10)
+
+## 0.2.0 - 2022-10-25
 - Initial Release
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/predicates-rs/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/assert-rs/predicates-rs/compare/v0.9.0...v1.0.0
+[Unreleased]: https://github.com/tokio-rs/async-backtrace/compare/v.2.0...HEAD
