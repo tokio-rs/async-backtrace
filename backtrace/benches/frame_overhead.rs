@@ -69,15 +69,13 @@ fn bench_root_poll_first<M: Measurement<Value = Duration>>(c: &mut BenchmarkGrou
     c.bench_function("Frame::in_scope + Drop (root, first)", move |b| {
         parbench! {
             b;
-            setup {
-                ();
-            }
+            setup {}
             bench {
                 // initialize a `Frame`
                 let frame = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
                 tokio::pin!(frame);
                 // invoke `Frame::in_scope` once
-                let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
+                let _ = black_box(frame.as_mut().in_scope(|| black_box(42)));
                 // drop the `Frame`
             }
         }
@@ -112,11 +110,11 @@ fn bench_root_poll_rest<M: Measurement<Value = Duration>>(c: &mut BenchmarkGroup
                 let frame = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
                 tokio::pin!(frame);
                 // invoke `Frame::in_scope` once
-                let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
+                let _ = black_box(frame.as_mut().in_scope(|| black_box(42)));
             }
             bench {
                 // repeatedly invoke `Frame::in_scope`
-                let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
+                let _ = black_box(frame.as_mut().in_scope(|| black_box(42)));
             }
         }
     });
@@ -144,7 +142,7 @@ fn bench_subframe_poll_first<M: Measurement<Value = Duration>>(c: &mut Benchmark
                 let frame = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
                 tokio::pin!(frame);
                 // ...and invoking `Frame::in_scope` once on it.
-                let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
+                let _ = black_box(frame.as_mut().in_scope(|| black_box(42)));
             })
         });
     });
@@ -165,10 +163,10 @@ fn bench_subframe_poll_rest<M: Measurement<Value = Duration>>(c: &mut BenchmarkG
             let frame = async_backtrace::ඞ::Frame::new(async_backtrace::location!());
             tokio::pin!(frame);
             // invoke `Frame::in_scope` on it
-            let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
+            let _ = black_box(frame.as_mut().in_scope(|| black_box(42)));
             // and benchmark subsequent invocations of `Frame::in_scope`.
             b.iter(|| {
-                let _ = black_box(frame.as_mut().in_scope(|| black_box(())));
+                let _ = black_box(frame.as_mut().in_scope(|| black_box(42)));
             })
         });
     });
