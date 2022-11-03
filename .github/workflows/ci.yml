@@ -178,7 +178,7 @@ jobs:
       - name: Install Rust (nightly)
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2022-10-24
+          toolchain: nightly
           override: true
           components: clippy
       - name: Rust Cache
@@ -186,7 +186,7 @@ jobs:
       - name: "`cargo clippy`"
         run: |
           set -e
-          cargo clippy
+          cargo clippy --all-targets
 
   check_msrv:
     runs-on: ubuntu-latest

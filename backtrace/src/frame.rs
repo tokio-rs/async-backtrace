@@ -289,10 +289,10 @@ impl Frame {
 
             if is_last {
                 current = format!("{prefix}└╼ {location}");
-                next = format!("{}   ", prefix);
+                next = format!("{prefix}   ");
             } else {
                 current = format!("{prefix}├╼ {location}");
-                next = format!("{}│  ", prefix);
+                next = format!("{prefix}│  ");
             }
 
             // print all but the first three codepoints of current
