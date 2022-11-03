@@ -2,6 +2,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.2.2] - 2022-11-03
+
 ### Fixed
 - ignore `clippy::empty_loop` in `#[framed]` macro expansion (#11)
 
@@ -14,5 +16,6 @@
 - Initial Release
 
 <!-- next-url -->
-[Unreleased]: https://github.com/tokio-rs/async-backtrace/compare/async-backtrace-v0.2.1...HEAD
+[Unreleased]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/tokio-rs/async-backtrace/compare/async-backtrace-v0.2.1...v0.2.2
 [0.2.1]: https://github.com/tokio-rs/async-backtrace/compare/v.2.0...async-backtrace-v0.2.1
