@@ -17,3 +17,4 @@ quote = "1.0.0"
 
 [package.metadata.release]
 shared-version = true
+tag = false

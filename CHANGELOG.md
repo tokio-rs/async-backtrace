@@ -10,5 +10,5 @@
 - Initial Release
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/predicates-rs/compare/async-backtrace-v0.2.1...HEAD
+[Unreleased]: https://github.com/tokio-rs/async-backtrace/compare/async-backtrace-v0.2.1...HEAD
 [0.2.1]: https://github.com/tokio-rs/async-backtrace/compare/v.2.0...async-backtrace-v0.2.1
