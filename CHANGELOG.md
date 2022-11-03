@@ -1,6 +1,10 @@
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
+
+### Fixed
+- ignore `clippy::empty_loop` in `#[framed]` macro expansion (#11)
+
 ## [0.2.1] - 2022-11-02
 
 ### Fixed
