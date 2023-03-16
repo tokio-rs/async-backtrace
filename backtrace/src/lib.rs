@@ -159,7 +159,7 @@ macro_rules! frame {
 
 /// Produces a human-readable tree of task states.
 ///
-/// If `wait_for_running_tasks` is `true`, this routine will display only the
+/// If `wait_for_running_tasks` is `false`, this routine will display only the
 /// top-level location of currently-running tasks and a note that they are
 /// "POLLING". Otherwise, this routine will wait for currently-running tasks to
 /// become idle.

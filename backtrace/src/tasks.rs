@@ -35,7 +35,7 @@ impl Task {
     pub(crate) fn dump_tree(&self, wait_for_running_tasks: bool) -> String {
         use crate::sync::TryLockError;
 
-        // safety: we promsie to not inspect the subframes without first locking
+        // safety: we promise to not inspect the subframes without first locking
         let frame = unsafe { self.0.as_ref() };
 
         let current_task: Option<NonNull<Frame>> =
