@@ -89,7 +89,7 @@ enum Kind {
 
     /// The frame is the root node in its tree.
     Root {
-        /// This mutex must be locked when modifying the
+        /// This mutex must be locked when accessing the
         /// [children][Frame::children] or [siblings][Frame::siblings] of this
         /// frame.
         mutex: Mutex<()>,
@@ -307,11 +307,11 @@ impl Frame {
             })?;
 
             if subframes_locked {
-                frame.subframes().for_each(|frame| {
-                    writeln!(f).unwrap();
-                    let is_last = frame.next_frame().is_none();
-                    fmt_helper(f, frame, is_last, &next, true).unwrap();
-                });
+                for subframe in frame.subframes() {
+                    writeln!(f)?;
+                    let is_last = subframe.next_frame().is_none();
+                    fmt_helper(f, subframe, is_last, &next, true)?;
+                }
             } else {
                 writeln!(f, "{prefix}└┈ [POLLING]")?;
             }
@@ -373,16 +373,22 @@ impl Frame {
         Backtrace::from_leaf(self)
     }
 
-    /// Produces an iterator over this frame's less-recently in
-    pub(crate) fn subframes(&self) -> impl Iterator<Item = &Frame> + FusedIterator {
+    /// Produces an iterator over this frame's children, in order from
+    /// less-recently initialized to more recently initialized.
+    ///
+    /// # Safety
+    /// The caller must ensure that the corresponding Kind::Root{mutex} is
+    /// locked.  The caller must also ensure that the returned iterator is
+    /// dropped before the mutex is dropped.
+    pub(crate) unsafe fn subframes(&self) -> impl Iterator<Item = &Frame> + FusedIterator {
         pub(crate) struct Subframes<'a> {
             iter: linked_list::Iter<'a, Frame>,
         }
 
         impl<'a> Subframes<'a> {
-            pub(crate) fn from_parent(frame: &'a Frame) -> Self {
+            pub(crate) unsafe fn from_parent(frame: &'a Frame) -> Self {
                 Self {
-                    iter: frame.children.with(|children| unsafe { &*children }.iter()),
+                    iter: frame.children.with(|children| (*children).iter()),
                 }
             }
         }
@@ -402,26 +408,30 @@ impl Frame {
 
     /// Produces this frame's previous (more-recently initialized) sibling (if
     /// any).
-    pub fn prev_frame(&self) -> Option<&Frame> {
-        unsafe {
-            <Frame as linked_list::Link>::pointers(NonNull::from(self))
-                .as_ref()
-                .get_prev()
-                .as_ref()
-                .map(|f| f.as_ref())
-        }
+    ///
+    /// # Safety
+    /// The caller must ensure that the corresponding Kind::Root{mutex} is
+    /// locked.
+    pub unsafe fn prev_frame(&self) -> Option<&Frame> {
+        <Frame as linked_list::Link>::pointers(NonNull::from(self))
+            .as_ref()
+            .get_prev()
+            .as_ref()
+            .map(|f| f.as_ref())
     }
 
     /// Produces this frame's previous (less-recently initialized) sibling (if
     /// any).
-    pub fn next_frame(&self) -> Option<&Frame> {
-        unsafe {
-            <Frame as linked_list::Link>::pointers(NonNull::from(self))
-                .as_ref()
-                .get_next()
-                .as_ref()
-                .map(|f| f.as_ref())
-        }
+    ///
+    /// # Safety
+    /// The caller must ensure that the corresponding Kind::Root{mutex} is
+    /// locked.
+    pub unsafe fn next_frame(&self) -> Option<&Frame> {
+        <Frame as linked_list::Link>::pointers(NonNull::from(self))
+            .as_ref()
+            .get_next()
+            .as_ref()
+            .map(|f| f.as_ref())
     }
 }
 
@@ -461,6 +471,6 @@ unsafe impl linked_list::Link for Frame {
     unsafe fn pointers(target: NonNull<Self>) -> NonNull<linked_list::Pointers<Self>> {
         let me = target.as_ptr();
         let field = ::std::ptr::addr_of_mut!((*me).siblings);
-        ::core::ptr::NonNull::new_unchecked(field)
+        NonNull::new_unchecked(field)
     }
 }

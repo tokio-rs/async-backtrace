@@ -163,6 +163,10 @@ macro_rules! frame {
 /// top-level location of currently-running tasks and a note that they are
 /// "POLLING". Otherwise, this routine will wait for currently-running tasks to
 /// become idle.
+///
+/// # Safety
+/// If `wait_for_running_tasks` is `true`, this routine may deadlock if any
+/// non-async lock is held which may also be held by a Framed task.
 pub fn taskdump_tree(wait_for_running_tasks: bool) -> String {
     itertools::join(
         tasks().map(|task| task.dump_tree(wait_for_running_tasks)),
