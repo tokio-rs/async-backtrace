@@ -307,9 +307,10 @@ impl Frame {
             })?;
 
             if subframes_locked {
-                for subframe in frame.subframes() {
+                let mut subframes = frame.subframes().peekable();
+                while let Some(subframe) = subframes.next() {
                     writeln!(f)?;
-                    let is_last = subframe.next_frame().is_none();
+                    let is_last = subframes.peek().is_none();
                     fmt_helper(f, subframe, is_last, &next, true)?;
                 }
             } else {
@@ -405,34 +406,6 @@ impl Frame {
         impl<'a> FusedIterator for Subframes<'a> {}
 
         Subframes::from_parent(self)
-    }
-
-    /// Produces this frame's previous (more-recently initialized) sibling (if
-    /// any).
-    ///
-    /// # Safety
-    /// The caller must ensure that the corresponding Kind::Root{mutex} is
-    /// locked.
-    pub unsafe fn prev_frame(&self) -> Option<&Frame> {
-        <Frame as linked_list::Link>::pointers(NonNull::from(self))
-            .as_ref()
-            .get_prev()
-            .as_ref()
-            .map(|f| f.as_ref())
-    }
-
-    /// Produces this frame's previous (less-recently initialized) sibling (if
-    /// any).
-    ///
-    /// # Safety
-    /// The caller must ensure that the corresponding Kind::Root{mutex} is
-    /// locked.
-    pub unsafe fn next_frame(&self) -> Option<&Frame> {
-        <Frame as linked_list::Link>::pointers(NonNull::from(self))
-            .as_ref()
-            .get_next()
-            .as_ref()
-            .map(|f| f.as_ref())
     }
 }
 
