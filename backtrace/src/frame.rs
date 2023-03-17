@@ -284,16 +284,25 @@ impl Frame {
             is_last: bool,
             prefix: &str,
             subframes_locked: bool,
+            copies: usize,
         ) -> core::fmt::Result {
             let location = frame.location();
             let current;
             let next;
 
             if is_last {
-                current = format!("{prefix}└╼ {location}");
+                if copies != 1 {
+                    current = format!("{prefix}└╼ {copies}x {location}");
+                } else {
+                    current = format!("{prefix}└╼ {location}");
+                }
                 next = format!("{prefix}   ");
             } else {
-                current = format!("{prefix}├╼ {location}");
+                if copies != 1 {
+                    current = format!("{prefix}├╼ {copies}x {location}");
+                } else {
+                    current = format!("{prefix}├╼ {location}");
+                }
                 next = format!("{prefix}│  ");
             }
 
@@ -308,10 +317,20 @@ impl Frame {
 
             if subframes_locked {
                 let mut subframes = frame.subframes().peekable();
+                let mut copies = 1;
                 while let Some(subframe) = subframes.next() {
-                    writeln!(f)?;
-                    let is_last = subframes.peek().is_none();
-                    fmt_helper(f, subframe, is_last, &next, true)?;
+                    if subframes
+                        .peek()
+                        .map(|next| next.deep_eq(subframe))
+                        .unwrap_or(false)
+                    {
+                        copies += 1;
+                    } else {
+                        writeln!(f)?;
+                        let is_last = subframes.peek().is_none();
+                        fmt_helper(f, subframe, is_last, &next, true, copies)?;
+                        copies = 1;
+                    }
                 }
             } else {
                 writeln!(f)?;
@@ -321,11 +340,9 @@ impl Frame {
             Ok(())
         }
 
-        fmt_helper(w, self, true, "  ", subframes_locked)
+        fmt_helper(w, self, true, "  ", subframes_locked, 1)
     }
-}
 
-impl Frame {
     /// Produces the parent frame of this frame.
     pub(crate) fn parent(&self) -> Option<&Frame> {
         if self.is_uninitialized() {
@@ -406,6 +423,34 @@ impl Frame {
         impl<'a> FusedIterator for Subframes<'a> {}
 
         Subframes::from_parent(self)
+    }
+
+    /// # Safety
+    /// The caller must ensure that the corresponding Kind::Root{mutex} is
+    /// locked.
+    pub(crate) unsafe fn deep_eq(&self, other: &Frame) -> bool {
+        if self.location() != other.location() {
+            return false;
+        }
+
+        let mut self_subframes = self.subframes();
+        let mut other_subframes = other.subframes();
+
+        loop {
+            match (self_subframes.next(), other_subframes.next()) {
+                (Some(self_subframe), Some(other_subframe)) => {
+                    if !self_subframe.deep_eq(other_subframe) {
+                        return false;
+                    }
+                }
+                (None, None) => {
+                    return true;
+                }
+                _ => {
+                    return false;
+                }
+            }
+        }
     }
 }
 
