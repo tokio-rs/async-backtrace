@@ -133,6 +133,7 @@ jobs:
 
     - name: Check
       run: cargo +${{ env.CRATE_TOOLCHAIN }} check --target ${{ matrix.target }} --all-targets --verbose
+      if: ${{ matrix.toolchain == 'stable' }}
 
     - name: Test
       run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose
