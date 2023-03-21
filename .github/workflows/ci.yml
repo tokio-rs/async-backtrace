@@ -131,21 +131,25 @@ jobs:
       run: sudo apt-get install gcc-multilib
       if: ${{ contains(matrix.target, 'i686') }}
 
-    - name: Check
+    - name: Check lib
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} check --target ${{ matrix.target }} --lib --verbose
+      if: ${{ matrix.toolchain == 'msrv' }}
+    
+    - name: Check extras
       run: cargo +${{ env.CRATE_TOOLCHAIN }} check --target ${{ matrix.target }} --all-targets --verbose
       if: ${{ matrix.toolchain != 'msrv' }}
 
     - name: Test
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --lib --bins --tests --verbose
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose
       # Only run tests when targetting x86 (32- or 64-bit) - we're executing on
       # x86_64, so we can't run tests for any non-x86 target.
-      if: ${{ contains(matrix.target, 'x86_64') || contains(matrix.target, 'i686') }}
+      if: ${{ matrix.toolchain != 'msrv' && (contains(matrix.target, 'x86_64') || contains(matrix.target, 'i686')) }}
 
     - name: Test (loom)
       run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose --release --tests
       # Only run tests when targetting x86 (32- or 64-bit) - we're executing on
       # x86_64, so we can't run tests for any non-x86 target.
-      if: ${{ contains(matrix.target, 'x86_64') || contains(matrix.target, 'aarch64') }}
+      if: ${{ matrix.toolchain != 'msrv' && (contains(matrix.target, 'x86_64') || contains(matrix.target, 'aarch64')) }}
       env:
         RUSTFLAGS: --cfg loom ${{ env.RUSTFLAGS }}
 
