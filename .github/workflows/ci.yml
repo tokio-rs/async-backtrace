@@ -133,10 +133,10 @@ jobs:
 
     - name: Check
       run: cargo +${{ env.CRATE_TOOLCHAIN }} check --target ${{ matrix.target }} --all-targets --verbose
-      if: ${{ matrix.toolchain == 'stable' }}
+      if: ${{ matrix.toolchain != 'msrv' }}
 
     - name: Test
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --lib --bins --tests --verbose
       # Only run tests when targetting x86 (32- or 64-bit) - we're executing on
       # x86_64, so we can't run tests for any non-x86 target.
       if: ${{ contains(matrix.target, 'x86_64') || contains(matrix.target, 'i686') }}
