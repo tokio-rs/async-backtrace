@@ -68,6 +68,7 @@ mod active_frame {
     #[cfg(not(loom))]
     std::thread_local! {
         /// The [`Frame`] of the currently-executing [traced future](crate::Traced) (if any).
+        #[allow(clippy::declare_interior_mutable_const)]
         static ACTIVE_FRAME: crate::cell::Cell<Option<NonNull<Frame>>> = const { Cell::new(None) };
     }
 
@@ -243,6 +244,7 @@ impl Frame {
     where
         F: FnOnce(&Cell<Option<&Frame>>) -> R,
     {
+        #[allow(clippy::needless_lifetimes)]
         unsafe fn into_ref<'a, 'b>(
             cell: &'a Cell<Option<NonNull<Frame>>>,
         ) -> &'a Cell<Option<&'b Frame>> {
@@ -277,7 +279,7 @@ impl Frame {
         subframes_locked: bool,
     ) -> std::fmt::Result {
         unsafe fn fmt_helper<W: core::fmt::Write>(
-            mut f: &mut W,
+            f: &mut W,
             frame: &Frame,
             is_last: bool,
             prefix: &str,
@@ -296,7 +298,7 @@ impl Frame {
             }
 
             // print all but the first three codepoints of current
-            write!(&mut f, "{}", {
+            write!(f, "{}", {
                 let mut current = current.chars();
                 current.next().unwrap();
                 current.next().unwrap();
@@ -306,12 +308,12 @@ impl Frame {
 
             if subframes_locked {
                 frame.subframes().for_each(|frame| {
-                    writeln!(&mut f).unwrap();
+                    writeln!(f).unwrap();
                     let is_last = frame.next_frame().is_none();
                     fmt_helper(f, frame, is_last, &next, true).unwrap();
                 });
             } else {
-                writeln!(&mut f, "{prefix}└┈ [POLLING]")?;
+                writeln!(f, "{prefix}└┈ [POLLING]")?;
             }
 
             Ok(())
