@@ -177,7 +177,7 @@ impl<'block> AsyncInfo<'block> {
         // last expression of the block: it determines the return value of the
         // block, this is quite likely a `Box::pin` statement or an async block
         let (last_expr_stmt, last_expr) = block.stmts.iter().rev().find_map(|stmt| {
-            if let Stmt::Expr(expr) = stmt {
+            if let Stmt::Expr(expr, _semi) = stmt {
                 Some((stmt, expr))
             } else {
                 None
