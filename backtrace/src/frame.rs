@@ -313,7 +313,8 @@ impl Frame {
                     fmt_helper(f, frame, is_last, &next, true).unwrap();
                 });
             } else {
-                writeln!(f, "{prefix}└┈ [POLLING]")?;
+                writeln!(f)?;
+                write!(f, "{prefix}└┈ [POLLING]")?;
             }
 
             Ok(())
