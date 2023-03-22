@@ -8,7 +8,7 @@ use crate::{
 };
 
 pin_project_lite::pin_project! {
-/// A [`Location`] in an intrusive, doubly-linked tree of [`Location`]s.
+/// A [`Frame`] in an intrusive, doubly-linked tree of [`Frame`]s.
 pub struct Frame {
     // The location associated with this frame.
     location: Location,
