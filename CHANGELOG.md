@@ -2,6 +2,18 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+- fix error in documentation of `taskdump_tree` (#15)
+- fix misplaced newline in output of `taskdump_tree(false)` (#16)
+
+### Changed
+- marked internal functions `Frame::subframes`, `Frame::prev_frame` and `Frame::next_frame` as `unsafe` (#17)
+- reduced unwrapping in `Frame::fmt` (#17)
+- upgrade `syn` to v2.0 (#19)
+
+### Removed
+- removed unused dev dependency on `smol` (#18)
+
 ## [0.2.2] - 2022-11-03
 
 ### Fixed
