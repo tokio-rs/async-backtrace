@@ -1,5 +1,4 @@
-/// A test that async-backtrace is well-behaved when frames are await'ed inside
-/// a drop guard.
+/// A test that taskdump_tree() consolidates adjacent identical subframes.
 mod util;
 
 #[test]
