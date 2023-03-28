@@ -8,7 +8,7 @@ use crate::{
 };
 
 pin_project_lite::pin_project! {
-/// A [`Location`] in an intrusive, doubly-linked tree of [`Location`]s.
+/// A [`Frame`] in an intrusive, doubly-linked tree of [`Frame`]s.
 pub struct Frame {
     // The location associated with this frame.
     location: Location,
@@ -284,16 +284,25 @@ impl Frame {
             is_last: bool,
             prefix: &str,
             subframes_locked: bool,
+            copies: usize,
         ) -> core::fmt::Result {
             let location = frame.location();
             let current;
             let next;
 
             if is_last {
-                current = format!("{prefix}└╼ {location}");
+                if copies != 1 {
+                    current = format!("{prefix}└╼ {copies}x {location}");
+                } else {
+                    current = format!("{prefix}└╼ {location}");
+                }
                 next = format!("{prefix}   ");
             } else {
-                current = format!("{prefix}├╼ {location}");
+                if copies != 1 {
+                    current = format!("{prefix}├╼ {copies}x {location}");
+                } else {
+                    current = format!("{prefix}├╼ {location}");
+                }
                 next = format!("{prefix}│  ");
             }
 
@@ -307,10 +316,21 @@ impl Frame {
             })?;
 
             if subframes_locked {
-                for subframe in frame.subframes() {
-                    writeln!(f)?;
-                    let is_last = subframe.next_frame().is_none();
-                    fmt_helper(f, subframe, is_last, &next, true)?;
+                let mut subframes = frame.subframes().peekable();
+                let mut copies = 1;
+                while let Some(subframe) = subframes.next() {
+                    if subframes
+                        .peek()
+                        .map(|next| next.deep_eq(subframe))
+                        .unwrap_or(false)
+                    {
+                        copies += 1;
+                    } else {
+                        writeln!(f)?;
+                        let is_last = subframes.peek().is_none();
+                        fmt_helper(f, subframe, is_last, &next, true, copies)?;
+                        copies = 1;
+                    }
                 }
             } else {
                 writeln!(f)?;
@@ -320,11 +340,9 @@ impl Frame {
             Ok(())
         }
 
-        fmt_helper(w, self, true, "  ", subframes_locked)
+        fmt_helper(w, self, true, "  ", subframes_locked, 1)
     }
-}
 
-impl Frame {
     /// Produces the parent frame of this frame.
     pub(crate) fn parent(&self) -> Option<&Frame> {
         if self.is_uninitialized() {
@@ -407,32 +425,32 @@ impl Frame {
         Subframes::from_parent(self)
     }
 
-    /// Produces this frame's previous (more-recently initialized) sibling (if
-    /// any).
-    ///
     /// # Safety
     /// The caller must ensure that the corresponding Kind::Root{mutex} is
     /// locked.
-    pub unsafe fn prev_frame(&self) -> Option<&Frame> {
-        <Frame as linked_list::Link>::pointers(NonNull::from(self))
-            .as_ref()
-            .get_prev()
-            .as_ref()
-            .map(|f| f.as_ref())
-    }
+    pub(crate) unsafe fn deep_eq(&self, other: &Frame) -> bool {
+        if self.location() != other.location() {
+            return false;
+        }
 
-    /// Produces this frame's previous (less-recently initialized) sibling (if
-    /// any).
-    ///
-    /// # Safety
-    /// The caller must ensure that the corresponding Kind::Root{mutex} is
-    /// locked.
-    pub unsafe fn next_frame(&self) -> Option<&Frame> {
-        <Frame as linked_list::Link>::pointers(NonNull::from(self))
-            .as_ref()
-            .get_next()
-            .as_ref()
-            .map(|f| f.as_ref())
+        let mut self_subframes = self.subframes();
+        let mut other_subframes = other.subframes();
+
+        loop {
+            match (self_subframes.next(), other_subframes.next()) {
+                (Some(self_subframe), Some(other_subframe)) => {
+                    if !self_subframe.deep_eq(other_subframe) {
+                        return false;
+                    }
+                }
+                (None, None) => {
+                    return true;
+                }
+                _ => {
+                    return false;
+                }
+            }
+        }
     }
 }
 

@@ -10,6 +10,7 @@ async fn selecting() {
     tokio::select! {
         biased;
         _ = yielding() => {}
+        _ = yielding() => {}
         _ = ready() => {}
     };
 }
