@@ -2,6 +2,9 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Changed
+- Consolidate consecutive identical sub-traces in output of `taskdump_tree` (#21)
+
 ## [0.2.3] - 2023-03-23
 
 ### Fixed
