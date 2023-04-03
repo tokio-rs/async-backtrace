@@ -99,7 +99,7 @@ pub(crate) mod tasks;
 pub(crate) use frame::Frame;
 pub(crate) use framed::Framed;
 pub use location::Location;
-pub(crate) use tasks::tasks;
+pub use tasks::{tasks, Task};
 
 /// Include the annotated async function in backtraces and taskdumps.
 ///
@@ -169,7 +169,7 @@ macro_rules! frame {
 /// non-async lock is held which may also be held by a Framed task.
 pub fn taskdump_tree(wait_for_running_tasks: bool) -> String {
     itertools::join(
-        tasks().map(|task| task.dump_tree(wait_for_running_tasks)),
+        tasks().map(|task| task.pretty_tree(wait_for_running_tasks)),
         "\n",
     )
 }
