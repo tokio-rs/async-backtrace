@@ -45,11 +45,13 @@ impl Task {
 
     /// Pretty-prints this task as a tree.
     ///
-    /// If `block_until_idle` is `false`, the output will note that this task is
-    /// currently being polled, and will not descend into its sub-frames.
-    /// Otherwise, if `block_until_idle` is `true` this routine will block
-    /// until this task is no longer being polled, then recursively descend and
-    /// pretty-print its sub-frames.
+    /// If `block_until_idle` is `true`, this routine will block until the task
+    /// is no longer being polled.  In this case, the caller should not hold any
+    /// locks which might be held by the task, otherwise deadlock may occur.
+    ///
+    /// If `block_until_idle` is `false`, and the task is being polled, the
+    /// output will not include the sub-frames, instead simply note that the
+    /// task is being polled.
     pub fn pretty_tree(&self, block_until_idle: bool) -> String {
         use crate::sync::TryLockError;
 
