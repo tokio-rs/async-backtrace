@@ -4,6 +4,7 @@ use once_cell::sync::Lazy;
 use rustc_hash::FxHasher;
 use std::{hash::BuildHasherDefault, ops::Deref, ptr::NonNull};
 
+/// A top-level [framed](crate::framed) future.
 #[derive(Hash, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct Task(NonNull<Frame>);
@@ -27,12 +28,31 @@ pub(crate) fn deregister(root_frame: &Frame) {
 }
 
 /// An iterator over tasks.
-pub(crate) fn tasks() -> impl Iterator<Item = impl Deref<Target = Task>> {
+///
+/// **NOTE:** The creation and destruction of some or all tasks will be blocked
+/// for as long as the return value of this function is live.
+pub fn tasks() -> impl Iterator<Item = impl Deref<Target = Task>> {
     TASK_SET.iter()
 }
 
 impl Task {
-    pub(crate) fn dump_tree(&self, wait_for_running_tasks: bool) -> String {
+    /// The location of this task.
+    pub fn location(&self) -> crate::Location {
+        // safety: we promise to not inspect the subframes without first locking
+        let frame = unsafe { self.0.as_ref() };
+        frame.location()
+    }
+
+    /// Pretty-prints this task as a tree.
+    ///
+    /// If `block_until_idle` is `true`, this routine will block until the task
+    /// is no longer being polled.  In this case, the caller should not hold any
+    /// locks which might be held by the task, otherwise deadlock may occur.
+    ///
+    /// If `block_until_idle` is `false`, and the task is being polled, the
+    /// output will not include the sub-frames, instead simply note that the
+    /// task is being polled.
+    pub fn pretty_tree(&self, block_until_idle: bool) -> String {
         use crate::sync::TryLockError;
 
         // safety: we promise to not inspect the subframes without first locking
@@ -46,7 +66,7 @@ impl Task {
             // don't grab a lock if we're *in* the active task (it's already locked, then)
             .filter(|_| Some(self.0) != current_task)
             .map(|mutex| {
-                if wait_for_running_tasks {
+                if block_until_idle {
                     mutex.lock().map_err(TryLockError::from)
                 } else {
                     mutex.try_lock()
