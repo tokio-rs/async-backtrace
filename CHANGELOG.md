@@ -2,6 +2,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.2.5] - 2023-04-13
+
 ### Added
 - make `tasks()`, `Task`, and related methods public (#23)
 
@@ -38,7 +40,8 @@
 - Initial Release
 
 <!-- next-url -->
-[Unreleased]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/tokio-rs/async-backtrace/compare/async-backtrace-v0.2.1...v0.2.2
