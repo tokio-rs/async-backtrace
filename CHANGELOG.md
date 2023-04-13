@@ -2,6 +2,9 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+- make `tasks()`, `Task`, and related methods public (#23)
+
 ## [0.2.4] - 2023-03-28
 
 ### Changed
