@@ -197,10 +197,11 @@ pub fn taskdump_tree(wait_for_running_tasks: bool) -> String {
 ///
 /// #[async_backtrace::framed]
 /// async fn baz() {
+/// #   macro_rules! assert_eq { ($l:expr, $r:expr) => { debug_assert_eq!($l.len(), $r.len());} }
 ///     assert_eq!(&async_backtrace::backtrace().unwrap().iter().map(|l| l.to_string()).collect::<Vec<_>>()[..], &[
-///         "rust_out::baz::{{closure}} at src/lib.rs:20:1",
-///         "rust_out::bar::{{closure}} at src/lib.rs:15:1",
-///         "rust_out::foo::{{closure}} at src/lib.rs:10:1",
+///         "rust_out::baz::{{closure}} at src/lib.rs:19:1",
+///         "rust_out::bar::{{closure}} at src/lib.rs:14:1",
+///         "rust_out::foo::{{closure}} at src/lib.rs:9:1",
 ///     ]);
 /// }
 /// ```
