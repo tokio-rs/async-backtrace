@@ -128,7 +128,9 @@ jobs:
     # When building tests for the i686 target, we need certain libraries which
     # are not installed by default; `gcc-multilib` includes these libraries.
     - name: Install gcc-multilib
-      run: sudo apt-get install gcc-multilib
+      run: |
+        sudo apt-get update
+        sudo apt-get install gcc-multilib
       if: ${{ contains(matrix.target, 'i686') }}
 
     - name: Check lib
