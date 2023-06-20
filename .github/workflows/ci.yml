@@ -133,6 +133,9 @@ jobs:
         sudo apt-get install gcc-multilib
       if: ${{ contains(matrix.target, 'i686') }}
 
+    - name: Cargo update
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} update --verbose
+
     - name: Check lib
       run: cargo +${{ env.CRATE_TOOLCHAIN }} check --target ${{ matrix.target }} --lib --verbose
       if: ${{ matrix.toolchain == 'msrv' }}
