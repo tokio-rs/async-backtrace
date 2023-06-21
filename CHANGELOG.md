@@ -2,6 +2,9 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+- suppress clippy warnings in generated code (#26)
+
 ## [0.2.5] - 2023-04-13
 
 ### Added
