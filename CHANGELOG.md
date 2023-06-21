@@ -2,6 +2,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.2.6] - 2023-06-21
+
 ### Fixed
 - suppress clippy warnings in generated code (#26)
 
@@ -43,7 +45,8 @@
 - Initial Release
 
 <!-- next-url -->
-[Unreleased]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/tokio-rs/async-backtrace/compare/v0.2.2...v0.2.3

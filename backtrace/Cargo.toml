@@ -1,6 +1,6 @@
 [package]
 name = "async-backtrace"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2018"
 license = "MIT"
 readme = "../README.md"
