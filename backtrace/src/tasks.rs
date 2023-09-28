@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use rustc_hash::FxHasher;
 use std::{hash::BuildHasherDefault, ops::Deref, ptr::NonNull};
 
-/// A top-level [framed](crate::framed) future.
+/// A top-level [framed](macro@crate::framed) future.
 #[derive(Hash, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct Task(NonNull<Frame>);

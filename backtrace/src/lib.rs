@@ -96,7 +96,7 @@ pub(crate) mod linked_list;
 pub(crate) mod location;
 pub(crate) mod tasks;
 
-pub(crate) use frame::Frame;
+pub use frame::Frame;
 pub(crate) use framed::Framed;
 pub use location::Location;
 pub use tasks::{tasks, Task};

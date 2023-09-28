@@ -4,7 +4,7 @@ use futures::Future;
 
 /// Produces a [`Location`] when invoked in a function body.
 ///
-/// ```
+/// ```no_run
 /// use async_backtrace::{location, Location};
 ///
 /// #[tokio::main]

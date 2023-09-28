@@ -8,7 +8,10 @@ use crate::{
 };
 
 pin_project_lite::pin_project! {
-/// A [`Frame`] in an intrusive, doubly-linked tree of [`Frame`]s.
+/// A function frame that may be reported in async backtraces.
+///
+// A Frame in an intrusive, doubly-linked tree of Frames.
+#[derive(Debug)]
 pub struct Frame {
     // The location associated with this frame.
     location: Location,
@@ -83,6 +86,7 @@ mod active_frame {
 }
 
 /// The kind of a [`Frame`].
+#[derive(Debug)]
 enum Kind {
     /// The frame is not yet initialized.
     Uninitialized,
@@ -109,6 +113,17 @@ type Children = linked_list::LinkedList<Frame, <Frame as linked_list::Link>::Tar
 
 impl Frame {
     /// Construct a new, uninitialized `Frame`.
+    ///
+    /// If you are framing a [`Future`](core::future::Future), use the
+    /// [`frame`](macro@crate::frame) or [`framed`](macro@crate::framed) macros
+    /// instead.
+    ///
+    /// # Examples
+    /// ```
+    /// use async_backtrace::*;
+    ///
+    /// let frame = Frame::new(location!());
+    /// ```
     pub fn new(location: Location) -> Self {
         Self {
             location,
@@ -123,6 +138,39 @@ impl Frame {
     ///
     /// If an invocation of `Frame::in_scope` is nested within `f`, those frames
     /// will be initialized with this frame as their parent.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use core::{task::{Context, Poll}, pin::Pin};
+    /// # use tokio::io::{AsyncRead, ReadBuf};
+    /// # use pin_project_lite::*;
+    /// pin_project! {
+    ///     #[must_use = "streams do nothing unless you `.await` or poll them"]
+    ///     pub struct Take<R> {
+    ///         #[pin]
+    ///         inner: R,
+    ///         // Add a `Frame` field to your type.
+    ///         #[pin]
+    ///         frame: async_backtrace::Frame,
+    ///         limit: u64,
+    ///     }
+    /// }
+    ///
+    /// impl<R: AsyncRead> AsyncRead for Take<R> {
+    ///     fn poll_read(
+    ///         self: Pin<&mut Self>,
+    ///         cx: &mut Context<'_>,
+    ///         buf: &mut ReadBuf<'_>,
+    ///     ) -> Poll<Result<(), std::io::Error>> {
+    ///         // And run your async routines `in_scope` of `Frame`.
+    ///         let this = self.project();
+    ///         this.frame.in_scope(|| {
+    ///             unimplemented!("method internals go here")  
+    ///         })
+    ///     }
+    /// }
+    /// ```
     pub fn in_scope<F, R>(self: Pin<&mut Self>, f: F) -> R
     where
         F: FnOnce() -> R,
@@ -187,7 +235,7 @@ impl Frame {
     }
 
     /// Produces a boxed slice over this frame's ancestors.
-    pub fn backtrace_locations(&self) -> Box<[Location]> {
+    pub(crate) fn backtrace_locations(&self) -> Box<[Location]> {
         let len = self.backtrace().count();
         let mut vec = Vec::with_capacity(len);
         vec.extend(self.backtrace().map(Frame::location));
@@ -195,7 +243,7 @@ impl Frame {
     }
 
     /// Produces the [`Location`] associated with this frame.
-    pub fn location(&self) -> Location {
+    pub(crate) fn location(&self) -> Location {
         self.location
     }
 
@@ -233,7 +281,7 @@ impl Frame {
 
     /// Executes the given function with a reference to the active frame on this
     /// thread (if any).
-    pub fn with_active<F, R>(f: F) -> R
+    pub(crate) fn with_active<F, R>(f: F) -> R
     where
         F: FnOnce(Option<&Frame>) -> R,
     {
@@ -364,7 +412,7 @@ impl Frame {
     }
 
     /// Produces an iterator over this frame's ancestors.
-    pub fn backtrace(&self) -> impl Iterator<Item = &Frame> + FusedIterator {
+    pub(crate) fn backtrace(&self) -> impl Iterator<Item = &Frame> + FusedIterator {
         /// An iterator that traverses up the tree of [`Frame`]s from a leaf.
         #[derive(Clone)]
         pub(crate) struct Backtrace<'a> {
