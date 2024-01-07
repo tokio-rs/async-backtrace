@@ -57,7 +57,7 @@ jobs:
     name: Build & Test (toolchain:${{ matrix.toolchain }}, target:${{ matrix.target }})
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     # We use toolchain descriptors ("msrv", "stable", and "nightly") in the
     # matrix. This step converts the current descriptor to a particular
@@ -168,7 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     name: cargo fmt
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install Rust (nightly)
         uses: actions-rs/toolchain@v1
         with:
@@ -184,7 +184,7 @@ jobs:
     runs-on: ubuntu-latest
     name: cargo clippy
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install Rust (nightly)
         uses: actions-rs/toolchain@v1
         with:
@@ -202,7 +202,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Check MSRVs match
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.0.0
       - uses: extractions/setup-just@v1
@@ -215,7 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Check README is correctly generated.
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.0.0
       - uses: extractions/setup-just@v1
