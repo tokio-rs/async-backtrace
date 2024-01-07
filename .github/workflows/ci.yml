@@ -123,7 +123,7 @@ jobs:
           components: clippy ${{ matrix.toolchain == 'nightly' && ', miri' || '' }}
 
     - name: Rust Cache
-      uses: Swatinem/rust-cache@v2.0.0
+      uses: Swatinem/rust-cache@v2
 
     # When building tests for the i686 target, we need certain libraries which
     # are not installed by default; `gcc-multilib` includes these libraries.
@@ -192,7 +192,7 @@ jobs:
           override: true
           components: clippy
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.0.0
+        uses: Swatinem/rust-cache@v2
       - name: "`cargo clippy`"
         run: |
           set -e
@@ -204,7 +204,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.0.0
+        uses: Swatinem/rust-cache@v2
       - uses: extractions/setup-just@v1
       # Make sure that the MSRV in async-backtrace's and async-backtrace-attributes's
       # `Cargo.toml` files are the same.
@@ -217,7 +217,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.0.0
+        uses: Swatinem/rust-cache@v2
       - uses: extractions/setup-just@v1
       - name: Check MSRVs match
         run: |
