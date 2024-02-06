@@ -9,15 +9,14 @@ use futures::Future;
 ///
 /// #[tokio::main]
 /// async fn main() {
-/// #   macro_rules! assert_eq { ($l:expr, $r:expr) => { debug_assert_eq!($l.len(), $r.len()); } }
-///     assert_eq!(location!().to_string(), "rust_out::main::{{closure}} at src/location.rs:8:16");
+///     assert_eq!(location!().to_string(), "rust_out::main::{{closure}} at backtrace/src/location.rs:8:16");
 ///
 ///     async {
-///         assert_eq!(location!().to_string(), "rust_out::main::{{closure}}::{{closure}} at src/location.rs:11:20");
+///         assert_eq!(location!().to_string(), "rust_out::main::{{closure}}::{{closure}} at backtrace/src/location.rs:11:20");
 ///     }.await;
 ///     
 ///     (|| async {
-///         assert_eq!(location!().to_string(), "rust_out::main::{{closure}}::{{closure}}::{{closure}} at src/location.rs:15:20");
+///         assert_eq!(location!().to_string(), "rust_out::main::{{closure}}::{{closure}}::{{closure}} at backtrace/src/location.rs:15:20");
 ///     })().await;
 /// }
 /// ```

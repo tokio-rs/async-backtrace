@@ -364,7 +364,7 @@ impl Frame {
     }
 
     /// Produces an iterator over this frame's ancestors.
-    pub fn backtrace(&self) -> impl Iterator<Item = &Frame> + FusedIterator {
+    pub fn backtrace(&self) -> impl FusedIterator<Item = &Frame> {
         /// An iterator that traverses up the tree of [`Frame`]s from a leaf.
         #[derive(Clone)]
         pub(crate) struct Backtrace<'a> {
@@ -399,7 +399,7 @@ impl Frame {
     /// The caller must ensure that the corresponding Kind::Root{mutex} is
     /// locked.  The caller must also ensure that the returned iterator is
     /// dropped before the mutex is dropped.
-    pub(crate) unsafe fn subframes(&self) -> impl Iterator<Item = &Frame> + FusedIterator {
+    pub(crate) unsafe fn subframes(&self) -> impl FusedIterator<Item = &Frame> {
         pub(crate) struct Subframes<'a> {
             iter: linked_list::Iter<'a, Frame>,
         }
