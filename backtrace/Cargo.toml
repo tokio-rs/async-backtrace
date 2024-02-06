@@ -4,7 +4,6 @@ version = "0.2.6"
 edition = "2018"
 license = "MIT"
 readme = "../README.md"
-rust-version = "1.59"
 description = "Efficient, logical 'backtraces' of async tasks."
 repository = "https://github.com/tokio-rs/async-backtrace"
 categories = ["asynchronous", "development-tools::debugging"]

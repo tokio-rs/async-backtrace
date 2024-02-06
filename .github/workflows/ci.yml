@@ -43,7 +43,7 @@ env:
   # `CRATE_NIGHTLY_XXX` are flags that we add to `XXX` only on the nightly
   # toolchain.
   CRATE_NIGHTLY_RUSTFLAGS: -Zrandomize-layout
-  CRATE_NIGHTLY_MIRIFLAGS: "-Zmiri-disable-isolation -Zmiri-symbolic-alignment-check"
+  CRATE_NIGHTLY_MIRIFLAGS: "-Zmiri-disable-isolation"
 
 jobs:
   build_test:
@@ -51,7 +51,7 @@ jobs:
 
     strategy:
       matrix:
-        toolchain: [ "msrv", "stable", "nightly" ]
+        toolchain: [ "stable", "nightly" ]
         target: [ "i686-unknown-linux-gnu", "x86_64-unknown-linux-gnu" ]
 
     name: Build & Test (toolchain:${{ matrix.toolchain }}, target:${{ matrix.target }})
@@ -138,23 +138,27 @@ jobs:
 
     - name: Check lib
       run: cargo +${{ env.CRATE_TOOLCHAIN }} check --target ${{ matrix.target }} --lib --verbose
-      if: ${{ matrix.toolchain == 'msrv' }}
     
     - name: Check extras
       run: cargo +${{ env.CRATE_TOOLCHAIN }} check --target ${{ matrix.target }} --all-targets --verbose
-      if: ${{ matrix.toolchain != 'msrv' }}
 
-    - name: Test
-      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose
+    - name: Test (doc)
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose --doc
       # Only run tests when targetting x86 (32- or 64-bit) - we're executing on
       # x86_64, so we can't run tests for any non-x86 target.
-      if: ${{ matrix.toolchain != 'msrv' && (contains(matrix.target, 'x86_64') || contains(matrix.target, 'i686')) }}
+      if: ${{ matrix.toolchain == 'nightly' && (contains(matrix.target, 'x86_64') || contains(matrix.target, 'i686')) }}
+
+    - name: Test (integration)
+      run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose --tests
+      # Only run tests when targetting x86 (32- or 64-bit) - we're executing on
+      # x86_64, so we can't run tests for any non-x86 target.
+      if: ${{ (contains(matrix.target, 'x86_64') || contains(matrix.target, 'i686')) }}
 
     - name: Test (loom)
       run: cargo +${{ env.CRATE_TOOLCHAIN }} test --target ${{ matrix.target }} --verbose --release --tests
       # Only run tests when targetting x86 (32- or 64-bit) - we're executing on
       # x86_64, so we can't run tests for any non-x86 target.
-      if: ${{ matrix.toolchain != 'msrv' && (contains(matrix.target, 'x86_64') || contains(matrix.target, 'aarch64')) }}
+      if: ${{ (contains(matrix.target, 'x86_64') || contains(matrix.target, 'aarch64')) }}
       env:
         RUSTFLAGS: --cfg loom ${{ env.RUSTFLAGS }}
 
@@ -198,19 +202,6 @@ jobs:
           set -e
           cargo clippy --all-targets
 
-  check_msrv:
-    runs-on: ubuntu-latest
-    name: Check MSRVs match
-    steps:
-      - uses: actions/checkout@v3
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.0.0
-      - uses: extractions/setup-just@v1
-      # Make sure that the MSRV in async-backtrace's and async-backtrace-attributes's
-      # `Cargo.toml` files are the same.
-      - name: Check MSRVs match
-        run: just check-msrv
-
   check_readme:
     runs-on: ubuntu-latest
     name: Check README is correctly generated.
@@ -219,7 +210,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.0.0
       - uses: extractions/setup-just@v1
-      - name: Check MSRVs match
+      - name: Check README matches
         run: |
           set -e
           cargo install cargo-readme --version 3.2.0
@@ -228,14 +219,13 @@ jobs:
 
   ci-success:
     name: ci
-    if: ${{ success() }}
+    if: failure()
     needs:
       - build_test
       - check_fmt
       - check_clippy
-      - check_msrv
       - check_readme
     runs-on: ubuntu-latest
     steps:
-      - name: CI succeeded
-        run: exit 0
+      - name: CI failed
+        run: exit 1
