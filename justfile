@@ -1,3 +1,5 @@
+TEST TEST TEST
+
 test: miri && loom
 
 loom:
