@@ -2,6 +2,10 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Changed
+- removed dependency on `itertools` (#36)
+- stopped sending `rust-version` field (#37)
+
 ## [0.2.6] - 2023-06-21
 
 ### Fixed
