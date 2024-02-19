@@ -1,6 +1,6 @@
 [package]
 name = "async-backtrace-attributes"
-version = "0.2.6"
+version = "0.2.7"
 edition = "2018"
 license = "MIT"
 description = "Procedural macros for the `async-backtrace` crate."
