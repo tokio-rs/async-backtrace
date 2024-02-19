@@ -168,10 +168,10 @@ macro_rules! frame {
 /// If `wait_for_running_tasks` is `true`, this routine may deadlock if any
 /// non-async lock is held which may also be held by a Framed task.
 pub fn taskdump_tree(wait_for_running_tasks: bool) -> String {
-    itertools::join(
-        tasks().map(|task| task.pretty_tree(wait_for_running_tasks)),
-        "\n",
-    )
+    tasks()
+        .map(|task| task.pretty_tree(wait_for_running_tasks))
+        .collect::<Vec<String>>()
+        .join("\n")
 }
 
 /// Produces a backtrace starting at the currently-active frame (if any).
